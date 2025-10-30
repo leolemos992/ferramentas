@@ -8,6 +8,11 @@ import { ArrowLeft } from "lucide-react";
 export default function DictionaryPage() {
   return (
     <main className="flex min-h-screen flex-col items-start justify-start relative bg-muted/40">
+      <Link href="/" className="absolute top-4 left-4 z-10">
+        <Button variant="outline">
+          <ArrowLeft className="mr-2 h-4 w-4" /> Voltar
+        </Button>
+      </Link>
       <DictionaryManager />
       <Toaster />
     </main>
