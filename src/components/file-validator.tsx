@@ -2,6 +2,7 @@
 "use client";
 
 import React, { useState, useRef, type ChangeEvent, useMemo } from "react";
+import { useVirtualizer } from '@tanstack/react-virtual'
 import {
   Card,
   CardContent,
@@ -551,6 +552,88 @@ const recordTypeNames: { [key: string]: string } = {
 };
 
 
+function InvalidLinesList({ invalidLines, getHighlightedLine, handleSuggestCorrection, suggestions }: {
+    invalidLines: LineResult[];
+    getHighlightedLine: (result: LineResult) => React.ReactNode;
+    handleSuggestCorrection: (result: LineResult) => void;
+    suggestions: Suggestion[];
+}) {
+    const parentRef = React.useRef<HTMLDivElement>(null);
+
+    const rowVirtualizer = useVirtualizer({
+        count: invalidLines.length,
+        getScrollElement: () => parentRef.current,
+        estimateSize: () => 130, 
+    });
+
+    return (
+        <div ref={parentRef} className="h-96 w-full rounded-md border overflow-y-auto">
+            <div
+                style={{
+                    height: `${rowVirtualizer.getTotalSize()}px`,
+                    width: '100%',
+                    position: 'relative',
+                }}
+            >
+                {rowVirtualizer.getVirtualItems().map((virtualItem) => {
+                    const result = invalidLines[virtualItem.index];
+                    const suggestion = suggestions.find(s => s.lineNumber === result.lineNumber);
+
+                    return (
+                        <div
+                            key={virtualItem.key}
+                            style={{
+                                position: 'absolute',
+                                top: 0,
+                                left: 0,
+                                width: '100%',
+                                transform: `translateY(${virtualItem.start}px)`,
+                            }}
+                        >
+                            <div className="p-3 border-l-4 rounded-r-md m-2 bg-red-50/50 border-red-500">
+                                <div className="flex items-start justify-between gap-4">
+                                    <div className="flex-1 overflow-hidden">
+                                        <div className="font-semibold">Linha {result.lineNumber}: <Badge variant="destructive">{result.recordType || 'N/A'}</Badge></div>
+                                        
+                                        <div className="mt-2">
+                                            {getHighlightedLine(result)}
+                                        </div>
+
+                                        <ul className="mt-2 space-y-1 list-disc pl-5">
+                                            {result.errors.map((error, index) => {
+                                                const fieldName = error.columnIndex >= 0 ? validationRules[result.recordType!]?.fields[error.columnIndex]?.name : 'Geral';
+                                                return (
+                                                    <li key={index} className="text-red-700 text-xs font-sans">
+                                                        <b>{fieldName} (Coluna {error.columnIndex + 1}):</b> {error.message}
+                                                    </li>
+                                                )
+                                            })}
+                                        </ul>
+                                    </div>
+                                    <Button size="sm" variant="outline" onClick={() => handleSuggestCorrection(result)} disabled={!result.recordType || suggestion?.isLoading}>
+                                        {suggestion?.isLoading ? <Loader2 className="h-4 w-4 animate-spin"/> : <Wand2 className="h-4 w-4"/>}
+                                        <span className="ml-2 hidden md:inline">Sugerir</span>
+                                    </Button>
+                                </div>
+                                {suggestion?.suggestedLine && (
+                                    <Alert className="mt-3">
+                                        <Wand2 className="h-4 w-4" />
+                                        <AlertTitle>Sugestão de Correção</AlertTitle>
+                                        <AlertDescription>
+                                            <p className="mt-1 text-xs font-mono bg-muted p-2 rounded">{suggestion.suggestedLine}</p>
+                                        </AlertDescription>
+                                    </Alert>
+                                )}
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+        </div>
+    );
+}
+
+
 export function FileValidator() {
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
@@ -914,55 +997,20 @@ export function FileValidator() {
                             <TabsTrigger value="file">Arquivo</TabsTrigger>
                         </TabsList>
                         <TabsContent value="errors" className="mt-4">
-                            <ScrollArea className="h-96 w-full rounded-md border">
-                                <div className="p-4 text-sm">
-                                {invalidLines.length === 0 ? (
-                                    <div className="flex flex-col items-center justify-center h-full text-center p-8">
-                                        <CheckCircle className="w-12 h-12 text-green-500 mb-4" />
-                                        <h3 className="text-lg font-semibold">Nenhum erro encontrado!</h3>
-                                        <p className="text-muted-foreground">Todas as linhas foram validadas com sucesso.</p>
-                                    </div>
-                                ) : (
-                                    invalidLines.map((result) => (
-                                        <div key={result.lineNumber} className="p-3 border-l-4 rounded-r-md mb-2 bg-red-50/50 border-red-500">
-                                            <div className="flex items-start justify-between gap-4">
-                                                <div className="flex-1 overflow-hidden">
-                                                    <div className="font-semibold">Linha {result.lineNumber}: <Badge variant="destructive">{result.recordType || 'N/A'}</Badge></div>
-                                                    
-                                                    <div className="mt-2">
-                                                        {getHighlightedLine(result)}
-                                                    </div>
-
-                                                    <ul className="mt-2 space-y-1 list-disc pl-5">
-                                                        {result.errors.map((error, index) => {
-                                                            const fieldName = error.columnIndex >= 0 ? validationRules[result.recordType!]?.fields[error.columnIndex]?.name : 'Geral';
-                                                            return (
-                                                                <li key={index} className="text-red-700 text-xs font-sans">
-                                                                    <b>{fieldName} (Coluna {error.columnIndex + 1}):</b> {error.message}
-                                                                </li>
-                                                            )
-                                                        })}
-                                                    </ul>
-                                                </div>
-                                                <Button size="sm" variant="outline" onClick={() => handleSuggestCorrection(result)} disabled={!result.recordType || suggestions.find(s => s.lineNumber === result.lineNumber)?.isLoading}>
-                                                    {suggestions.find(s => s.lineNumber === result.lineNumber)?.isLoading ? <Loader2 className="h-4 w-4 animate-spin"/> : <Wand2 className="h-4 w-4"/>}
-                                                    <span className="ml-2 hidden md:inline">Sugerir</span>
-                                                </Button>
-                                            </div>
-                                            {suggestions.find(s => s.lineNumber === result.lineNumber && s.suggestedLine) && (
-                                                <Alert className="mt-3">
-                                                    <Wand2 className="h-4 w-4" />
-                                                    <AlertTitle>Sugestão de Correção</AlertTitle>
-                                                    <AlertDescription>
-                                                        <p className="mt-1 text-xs font-mono bg-muted p-2 rounded">{suggestions.find(s => s.lineNumber === result.lineNumber)?.suggestedLine}</p>
-                                                    </AlertDescription>
-                                                </Alert>
-                                            )}
-                                        </div>
-                                    ))
-                                )}
+                            {invalidLines.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center h-96 text-center p-8 border rounded-md">
+                                    <CheckCircle className="w-12 h-12 text-green-500 mb-4" />
+                                    <h3 className="text-lg font-semibold">Nenhum erro encontrado!</h3>
+                                    <p className="text-muted-foreground">Todas as linhas foram validadas com sucesso.</p>
                                 </div>
-                            </ScrollArea>
+                            ) : (
+                                <InvalidLinesList 
+                                    invalidLines={invalidLines}
+                                    getHighlightedLine={getHighlightedLine}
+                                    handleSuggestCorrection={handleSuggestCorrection}
+                                    suggestions={suggestions}
+                                />
+                            )}
                         </TabsContent>
                         <TabsContent value="valid" className="mt-4">
                              <ScrollArea className="h-96 w-full rounded-md border">
@@ -997,7 +1045,3 @@ export function FileValidator() {
     </div>
   );
 }
-
-    
-
-    
