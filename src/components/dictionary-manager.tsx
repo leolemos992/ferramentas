@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useRef, ChangeEvent } from "react";
@@ -11,7 +12,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { UploadCloud, X } from "lucide-react";
+import { UploadCloud, X, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Label } from "./ui/label";
 import { DictionaryViewer, TableData } from "./dictionary-viewer";
@@ -159,19 +160,27 @@ export function DictionaryManager() {
             <Label
               htmlFor="file-upload"
               className={cn(
-                "flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-card hover:bg-secondary/50 transition-colors"
+                "flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-card hover:bg-secondary/50 transition-colors",
+                {"pointer-events-none opacity-50": loading}
               )}
             >
-              <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                <UploadCloud className="w-8 h-8 mb-3 text-muted-foreground" />
-                <p className="mb-2 text-sm text-muted-foreground">
-                  <span className="font-semibold text-primary">
-                    Clique para fazer upload
-                  </span>{" "}
-                  ou arraste e solte
-                </p>
-                <p className="text-xs text-muted-foreground">Arquivo .HTML</p>
-              </div>
+              {loading ? (
+                <div className="flex flex-col items-center justify-center">
+                    <Loader2 className="w-8 h-8 mb-3 text-muted-foreground animate-spin" />
+                    <p className="text-sm text-muted-foreground">Processando arquivo...</p>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                  <UploadCloud className="w-8 h-8 mb-3 text-muted-foreground" />
+                  <p className="mb-2 text-sm text-muted-foreground">
+                    <span className="font-semibold text-primary">
+                      Clique para fazer upload
+                    </span>{" "}
+                    ou arraste e solte
+                  </p>
+                  <p className="text-xs text-muted-foreground">Arquivo .HTML</p>
+                </div>
+              )}
             </Label>
             <Input
               id="file-upload"
@@ -180,10 +189,11 @@ export function DictionaryManager() {
               onChange={handleFileChange}
               accept=".html"
               className="sr-only"
+              disabled={loading}
             />
           </div>
 
-          {file && (
+          {file && !loading && (
             <div className="flex items-center justify-between p-3 bg-secondary rounded-md animate-in fade-in-50">
               <span className="text-sm font-medium text-secondary-foreground truncate">
                 {file.name}
@@ -202,10 +212,8 @@ export function DictionaryManager() {
         </CardContent>
       </Card>
 
-      {loading && <p className="text-center mt-4">Carregando e processando o arquivo...</p>}
-
-      {tables.length > 0 && (
-        <div className="mt-8">
+      {tables.length > 0 && !loading && (
+        <div className="mt-8 animate-in fade-in-50 duration-500">
             <DictionaryViewer tables={tables} />
         </div>
       )}

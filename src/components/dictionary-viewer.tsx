@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo } from 'react';
@@ -7,6 +8,7 @@ import { Badge } from './ui/badge';
 import { ScrollArea } from './ui/scroll-area';
 import { Button } from './ui/button';
 import { cn } from '@/lib/utils';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 
 export type TableData = {
   name: string;
@@ -52,9 +54,9 @@ export function DictionaryViewer({ tables }: DictionaryViewerProps) {
   }, [selectedTable, columnSearchTerm]);
 
   return (
-    <div className="flex h-[calc(100vh-12rem)] border rounded-lg">
-      <aside className="w-1/4 min-w-[250px] border-r">
-        <div className="p-4 space-y-4">
+    <div className="flex h-[calc(100vh-22rem)] border rounded-lg bg-card text-card-foreground">
+      <aside className="w-1/4 min-w-[250px] border-r flex flex-col">
+        <div className="p-4 space-y-4 border-b">
           <h3 className="text-lg font-semibold tracking-tight">Tabelas ({filteredTables.length})</h3>
           <Input
             placeholder="Filtrar tabelas..."
@@ -62,21 +64,21 @@ export function DictionaryViewer({ tables }: DictionaryViewerProps) {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <ScrollArea className="h-[calc(100%-8rem)]">
-          <div className="px-4 space-y-1">
+        <ScrollArea className="flex-1">
+          <div className="p-2 space-y-1">
             {filteredTables.map((table) => (
               <Button
                 key={table.name}
                 variant="ghost"
                 onClick={() => setSelectedTable(table)}
                 className={cn(
-                  "w-full justify-start text-left h-auto py-2",
+                  "w-full justify-start text-left h-auto py-2 px-3",
                   selectedTable?.name === table.name && "bg-muted hover:bg-muted"
                 )}
               >
                 <div className="flex flex-col">
                   <span className="font-semibold">{table.name}</span>
-                  <span className="text-xs text-muted-foreground">{table.description}</span>
+                  <span className="text-xs text-muted-foreground line-clamp-1">{table.description}</span>
                 </div>
               </Button>
             ))}
@@ -84,7 +86,7 @@ export function DictionaryViewer({ tables }: DictionaryViewerProps) {
         </ScrollArea>
       </aside>
       <main className="w-3/4 p-4 md:p-6">
-        <ScrollArea className="h-full">
+        <ScrollArea className="h-full pr-4">
             {selectedTable ? (
                 <div className="space-y-6">
                     <header>
@@ -92,63 +94,71 @@ export function DictionaryViewer({ tables }: DictionaryViewerProps) {
                         <p className="text-muted-foreground">{selectedTable.description}</p>
                     </header>
                     
-                    <div className="space-y-4">
-                        <div className="flex justify-between items-center">
-                            <h3 className="font-semibold text-lg">Campos</h3>
-                            <Input
-                                placeholder="Filtrar colunas..."
-                                value={columnSearchTerm}
-                                onChange={(e) => setColumnSearchTerm(e.target.value)}
-                                className="max-w-xs"
-                            />
-                        </div>
-                        <Table>
-                            <TableHeader>
-                            <TableRow>
-                                <TableHead>Nome</TableHead>
-                                <TableHead>Tipo</TableHead>
-                                <TableHead>Tamanho</TableHead>
-                                <TableHead>Descrição</TableHead>
-                            </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                            {filteredFields.map((field, fieldIndex) => (
-                                <TableRow key={fieldIndex}>
-                                <TableCell className="font-mono text-xs">{field.name}</TableCell>
-                                <TableCell className="font-mono text-xs">{field.type}</TableCell>
-                                <TableCell className="font-mono text-xs">{field.size}</TableCell>
-                                <TableCell>{field.description}</TableCell>
-                                </TableRow>
-                            ))}
-                            </TableBody>
-                        </Table>
-                         {filteredFields.length === 0 && <p className='text-center text-muted-foreground pt-4'>Nenhuma coluna encontrada.</p>}
-                    </div>
-
-                    {selectedTable.foreignKeys.length > 0 && (
-                        <div className="space-y-4">
-                            <h3 className="font-semibold text-lg pt-4">Chaves Estrangeiras</h3>
+                    <Card>
+                        <CardHeader>
+                            <div className="flex justify-between items-center">
+                                <CardTitle>Campos</CardTitle>
+                                <Input
+                                    placeholder="Filtrar colunas..."
+                                    value={columnSearchTerm}
+                                    onChange={(e) => setColumnSearchTerm(e.target.value)}
+                                    className="max-w-xs"
+                                />
+                            </div>
+                        </CardHeader>
+                        <CardContent>
                             <Table>
                                 <TableHeader>
                                 <TableRow>
-                                    <TableHead>Nome</TableHead>
-                                    <TableHead>Coluna</TableHead>
-                                    <TableHead>Tabela Relacionada</TableHead>
-                                    <TableHead>Coluna Relacionada</TableHead>
+                                    <TableHead className="w-[200px]">Nome</TableHead>
+                                    <TableHead className="w-[150px]">Tipo</TableHead>
+                                    <TableHead className="w-[100px]">Tamanho</TableHead>
+                                    <TableHead>Descrição</TableHead>
                                 </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                {selectedTable.foreignKeys.map((fk, fkIndex) => (
-                                    <TableRow key={fkIndex}>
-                                    <TableCell className="font-mono text-xs">{fk.name}</TableCell>
-                                    <TableCell className="font-mono text-xs">{fk.column}</TableCell>
-                                    <TableCell className="font-mono text-xs">{fk.relatedTable}</TableCell>
-                                    <TableCell className="font-mono text-xs">{fk.relatedColumn}</TableCell>
+                                {filteredFields.map((field, fieldIndex) => (
+                                    <TableRow key={fieldIndex}>
+                                        <TableCell className="font-mono text-xs">{field.name}</TableCell>
+                                        <TableCell><Badge variant="secondary">{field.type}</Badge></TableCell>
+                                        <TableCell className="font-mono text-xs">{field.size}</TableCell>
+                                        <TableCell>{field.description}</TableCell>
                                     </TableRow>
                                 ))}
                                 </TableBody>
                             </Table>
-                        </div>
+                             {filteredFields.length === 0 && <p className='text-center text-muted-foreground pt-8'>Nenhuma coluna encontrada.</p>}
+                        </CardContent>
+                    </Card>
+
+                    {selectedTable.foreignKeys.length > 0 && (
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Chaves Estrangeiras</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <Table>
+                                    <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Nome</TableHead>
+                                        <TableHead>Coluna</TableHead>
+                                        <TableHead>Tabela Relacionada</TableHead>
+                                        <TableHead>Coluna Relacionada</TableHead>
+                                    </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                    {selectedTable.foreignKeys.map((fk, fkIndex) => (
+                                        <TableRow key={fkIndex}>
+                                        <TableCell className="font-mono text-xs">{fk.name}</TableCell>
+                                        <TableCell className="font-mono text-xs">{fk.column}</TableCell>
+                                        <TableCell className="font-mono text-xs">{fk.relatedTable}</TableCell>
+                                        <TableCell className="font-mono text-xs">{fk.relatedColumn}</TableCell>
+                                        </TableRow>
+                                    ))}
+                                    </TableBody>
+                                </Table>
+                            </CardContent>
+                        </Card>
                     )}
                 </div>
             ) : (
