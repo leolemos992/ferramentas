@@ -13,13 +13,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { X, CheckCircle, AlertCircle, UploadCloud, FileCheck, Trash2, Loader2, Wand2, FileText, Database, Wrench } from "lucide-react";
+import { X, CheckCircle, AlertCircle, UploadCloud, FileCheck, Trash2, Loader2, Wrench, FileText, Database } from "lucide-react";
 import { Label } from "./ui/label";
 import { cn } from "@/lib/utils";
 import { Badge } from "./ui/badge";
 import { ScrollArea } from "./ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
-import { suggestCorrection } from "@/ai/flows/suggest-correction-flow";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 
@@ -177,19 +176,19 @@ const validationRules: ValidationRules = {
   RZ: {
     fieldCount: 13,
     fields: [
-        { name: "Identificação", type: "C", maxLength: 2, required: true },
-        { name: "Reservado", type: "C", maxLength: 4, required: false },
-        { name: "Filial", type: "C", maxLength: 4, required: true },
-        { name: "Ecf", type: "N", maxLength: 3, required: true },
-        { name: "Modelo", type: "C", maxLength: 20, required: true },
-        { name: "Número de série", type: "C", maxLength: 20, required: true },
-        { name: "Data", type: "D", maxLength: 8, required: true },
-        { name: "CRO", type: "N", maxLength: 6, required: true },
-        { name: "CRZ", type: "N", maxLength: 6, required: true },
-        { name: "GT Final", type: "N", maxLength: 12, decimals: 2, required: true },
-        { name: "Venda bruta", type: "N", maxLength: 12, decimals: 2, required: true },
-        { name: "Coo inicial", type: "N", maxLength: 6, required: true },
-        { name: "Coo final", type: "N", maxLength: 6, required: true },
+      { name: "Identificação", type: "C", maxLength: 2, required: true },
+      { name: "Reservado", type: "C", maxLength: 4, required: false },
+      { name: "Filial", type: "C", maxLength: 4, required: true },
+      { name: "Ecf", type: "N", maxLength: 3, required: true },
+      { name: "Modelo", type: "C", maxLength: 20, required: true },
+      { name: "Número de série", type: "C", maxLength: 20, required: true },
+      { name: "Data", type: "D", maxLength: 8, required: true },
+      { name: "CRO", type: "N", maxLength: 6, required: true },
+      { name: "CRZ", type: "N", maxLength: 6, required: true },
+      { name: "GT Final", type: "N", maxLength: 12, decimals: 2, required: true },
+      { name: "Venda bruta", type: "N", maxLength: 12, decimals: 2, required: true },
+      { name: "Coo inicial", type: "N", maxLength: 6, required: true },
+      { name: "Coo final", type: "N", maxLength: 6, required: true },
     ]
   },
   TP: {
@@ -522,9 +521,7 @@ type LineResult = {
 
 type Suggestion = {
     lineNumber: number;
-    originalLine: string;
     suggestedLine: string;
-    isLoading: boolean;
 }
 
 const recordTypeNames: { [key: string]: string } = {
@@ -563,7 +560,8 @@ function InvalidLinesList({ invalidLines, getHighlightedLine, handleSuggestCorre
     const rowVirtualizer = useVirtualizer({
         count: invalidLines.length,
         getScrollElement: () => parentRef.current,
-        estimateSize: () => 130, 
+        estimateSize: () => 130,
+        overscan: 5,
     });
 
     return (
@@ -615,20 +613,20 @@ function InvalidLinesList({ invalidLines, getHighlightedLine, handleSuggestCorre
                                     <TooltipProvider>
                                         <Tooltip>
                                             <TooltipTrigger asChild>
-                                                <Button size="sm" variant="outline" onClick={() => handleSuggestCorrection(result)} disabled={!result.recordType || suggestion?.isLoading}>
-                                                    {suggestion?.isLoading ? <Loader2 className="h-4 w-4 animate-spin"/> : <Wand2 className="h-4 w-4"/>}
+                                                <Button size="sm" variant="outline" onClick={() => handleSuggestCorrection(result)}>
+                                                    <Wrench className="h-4 w-4"/>
                                                     <span className="ml-2 hidden md:inline">Sugerir</span>
                                                 </Button>
                                             </TooltipTrigger>
                                             <TooltipContent>
-                                                <p>Sugerir correção com IA</p>
+                                                <p>Sugerir correção com base nas regras</p>
                                             </TooltipContent>
                                         </Tooltip>
                                     </TooltipProvider>
                                 </div>
                                 {suggestion?.suggestedLine && (
                                     <Alert className="mt-3">
-                                        <Wand2 className="h-4 w-4" />
+                                        <Wrench className="h-4 w-4" />
                                         <AlertTitle>Sugestão de Correção</AlertTitle>
                                         <AlertDescription>
                                             <p className="mt-1 text-xs font-mono bg-muted p-2 rounded">{suggestion.suggestedLine}</p>
@@ -801,43 +799,6 @@ export function FileValidator() {
     reader.readAsText(file);
   };
   
-  const handleSuggestCorrection = async (result: LineResult) => {
-    const { lineNumber, lineContent, recordType, errors } = result;
-    if (!recordType) return;
-  
-    const rule = validationRules[recordType];
-    if (!rule) return;
-    
-    setSuggestions(prev => {
-        const existing = prev.find(s => s.lineNumber === lineNumber);
-        if (existing) {
-            return prev.map(s => s.lineNumber === lineNumber ? { ...s, isLoading: true } : s);
-        }
-        return [...prev, { lineNumber, originalLine: lineContent, suggestedLine: "", isLoading: true }];
-    });
-    
-    try {
-        const simpleErrors = errors.map(e => {
-            const fieldName = e.columnIndex >= 0 ? rule.fields[e.columnIndex]?.name : 'Linha';
-            return `Coluna ${e.columnIndex + 1} (${fieldName}): ${e.message}`;
-        });
-
-        const suggestion = await suggestCorrection({
-            lineContent,
-            recordType,
-            rules: rule.fields,
-            errors: simpleErrors,
-        });
-
-        setSuggestions(prev => prev.map(s => s.lineNumber === lineNumber ? { ...s, suggestedLine: suggestion, isLoading: false } : s));
-        toast({ title: "Sugestão Gerada", description: `A sugestão para a linha ${lineNumber} foi criada.` });
-    } catch (error) {
-        console.error("Error getting suggestion:", error);
-        toast({ variant: "destructive", title: "Erro ao Gerar Sugestão", description: "Não foi possível conectar com a IA." });
-        setSuggestions(prev => prev.map(s => s.lineNumber === lineNumber ? { ...s, isLoading: false } : s));
-    }
-  };
-
   const correctLine = (lineResult: LineResult): string => {
     if (lineResult.errors.length === 0) return lineResult.lineContent;
     
@@ -899,6 +860,22 @@ export function FileValidator() {
 
     return fields.join(';');
   }
+  
+  const handleSuggestCorrection = (result: LineResult) => {
+    const { lineNumber } = result;
+    const suggestion = correctLine(result);
+
+    setSuggestions(prev => {
+        const existing = prev.find(s => s.lineNumber === lineNumber);
+        if (existing) {
+            // Se já existe, atualiza a sugestão
+            return prev.map(s => s.lineNumber === lineNumber ? { ...s, suggestedLine: suggestion } : s);
+        }
+        // Se não existe, adiciona
+        return [...prev, { lineNumber, suggestedLine: suggestion }];
+    });
+    toast({ title: "Sugestão Gerada", description: `A sugestão para a linha ${lineNumber} foi criada.` });
+  };
 
   const handleCorrection = () => {
     if (invalidLines.length === 0) {
@@ -955,7 +932,7 @@ export function FileValidator() {
     const errorColumns = result.errors.map(e => e.columnIndex);
   
     return (
-      <span className="font-mono text-xs whitespace-pre-wrap break-all">
+      <div className="font-mono text-xs whitespace-pre-wrap break-all">
         {fields.map((field, index) => {
           const fieldRule = result.recordType && validationRules[result.recordType] ? validationRules[result.recordType].fields[index] : undefined;
           const tooltipContent = fieldRule ? `${fieldRule.name} (Max: ${fieldRule.maxLength}, Tipo: ${fieldRule.type})` : `Coluna ${index + 1}`;
@@ -981,7 +958,7 @@ export function FileValidator() {
             </React.Fragment>
           )
         })}
-      </span>
+      </div>
     );
   };
 
@@ -1155,7 +1132,7 @@ export function FileValidator() {
                                             <CheckCircle className="h-5 w-5 text-green-500 shrink-0" />
                                             <div>Linha {result.lineNumber}: <Badge variant="secondary">{result.recordType || 'N/A'}</Badge></div>
                                         </div>
-                                        <p className="truncate mt-1 ml-9 text-muted-foreground">{result.lineContent}</p>
+                                        <div className="font-mono text-xs whitespace-pre-wrap break-all truncate mt-1 ml-9 text-muted-foreground">{result.lineContent}</div>
                                     </div>
                                 ))}
                                 </div>
@@ -1173,4 +1150,3 @@ export function FileValidator() {
     </div>
   );
 }
-
