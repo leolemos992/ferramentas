@@ -254,7 +254,7 @@ const validationRules: ValidationRules = {
         { name: "Complemento de cobrança", type: "C", maxLength: 50, required: false },
         { name: "Bairro de cobrança", type: "C", maxLength: 50, required: false },
         { name: "Campo extra 1", type: "C", maxLength: 512, required: false },
-        { name: "Campo extra 2", type_name: "C", maxLength: 512, required: false },
+        { name: "Campo extra 2", type: "C", maxLength: 512, required: false },
         { name: "Campo extra 3", type: "C", maxLength: 512, required: false },
         { name: "Campo extra 4", type: "C", maxLength: 512, required: false },
         { name: "Campo extra 5", type: "C", maxLength: 512, required: false },
@@ -770,9 +770,9 @@ export function FileValidator() {
 
                 {file && !loading && (
                     <div className="flex items-center justify-between p-3 bg-secondary rounded-md animate-in fade-in-50">
-                    <span className="text-sm font-medium text-secondary-foreground truncate">
+                    <div className="text-sm font-medium text-secondary-foreground truncate">
                         {file.name}
-                    </span>
+                    </div>
                     <Button
                         variant="ghost"
                         size="icon"
@@ -835,10 +835,9 @@ export function FileValidator() {
                     </div>
                     
                     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                        <TabsList className="grid w-full grid-cols-3">
+                        <TabsList className="grid w-full grid-cols-2">
                             <TabsTrigger value="errors">Linhas com Erro ({invalidLines.length})</TabsTrigger>
                             <TabsTrigger value="valid">Linhas Válidas ({validLines.length})</TabsTrigger>
-                            <TabsTrigger value="suggestions">Sugestões de Correção ({suggestions.filter(s => s.suggestedLine).length})</TabsTrigger>
                         </TabsList>
                         <TabsContent value="errors" className="mt-4">
                             <ScrollArea className="h-96 w-full rounded-md border">
@@ -851,22 +850,33 @@ export function FileValidator() {
                                     </div>
                                 ) : invalidLines.map((result) => (
                                     <div key={result.lineNumber} className="p-3 border-l-4 rounded-r-md mb-2 bg-red-50 border-red-500">
-                                        <div className="flex items-center justify-between gap-4">
-                                            <div className="flex items-center gap-4">
-                                                <AlertCircle className="h-5 w-5 text-red-500 shrink-0" />
-                                                <div className="font-semibold">Linha {result.lineNumber}: <Badge variant="destructive">{result.recordType || 'N/A'}</Badge></div>
+                                        <div className="flex items-start justify-between gap-4">
+                                            <div className="flex items-start gap-4">
+                                                <AlertCircle className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
+                                                <div>
+                                                  <div className="font-semibold">Linha {result.lineNumber}: <Badge variant="destructive">{result.recordType || 'N/A'}</Badge></div>
+                                                  <p className="truncate mt-2 text-muted-foreground">{result.lineContent}</p>
+                                                  <div className="mt-2 space-y-1">
+                                                      {result.errors.map((error, index) => (
+                                                          <p key={index} className="text-red-700 text-xs">{error}</p>
+                                                      ))}
+                                                  </div>
+                                                </div>
                                             </div>
                                             <Button size="sm" variant="outline" onClick={() => handleSuggestCorrection(result)} disabled={suggestions.find(s => s.lineNumber === result.lineNumber)?.isLoading}>
                                                 {suggestions.find(s => s.lineNumber === result.lineNumber)?.isLoading ? <Loader2 className="h-4 w-4 animate-spin"/> : <Wand2 className="h-4 w-4"/>}
-                                                <span className="ml-2 hidden md:inline">Sugerir Correção</span>
+                                                <span className="ml-2 hidden md:inline">Sugerir</span>
                                             </Button>
                                         </div>
-                                        <p className="truncate mt-2 ml-9 text-muted-foreground">{result.lineContent}</p>
-                                        <div className="mt-2 ml-9 space-y-1">
-                                            {result.errors.map((error, index) => (
-                                                <p key={index} className="text-red-700 text-xs">{error}</p>
-                                            ))}
-                                        </div>
+                                        {suggestions.find(s => s.lineNumber === result.lineNumber && s.suggestedLine) && (
+                                            <Alert className="mt-3">
+                                                <Wand2 className="h-4 w-4" />
+                                                <AlertTitle>Sugestão de Correção</AlertTitle>
+                                                <AlertDescription>
+                                                    <p className="mt-1 text-xs font-mono bg-muted p-2 rounded">{suggestions.find(s => s.lineNumber === result.lineNumber)?.suggestedLine}</p>
+                                                </AlertDescription>
+                                            </Alert>
+                                        )}
                                     </div>
                                 ))}
                                 </div>
@@ -893,34 +903,6 @@ export function FileValidator() {
                                 </div>
                             </ScrollArea>
                         </TabsContent>
-                         <TabsContent value="suggestions" className="mt-4">
-                            <ScrollArea className="h-96 w-full rounded-md border">
-                                <div className="p-4 font-mono text-sm space-y-4">
-                                {suggestions.filter(s => s.suggestedLine).length === 0 ? (
-                                    <div className="flex flex-col items-center justify-center h-full text-center p-8">
-                                        <Wand2 className="w-12 h-12 text-blue-500 mb-4" />
-                                        <h3 className="text-lg font-semibold">Nenhuma sugestão gerada.</h3>
-                                        <p className="text-muted-foreground">Vá para a aba de erros e clique em "Sugerir Correção" para que a IA gere sugestões.</p>
-                                    </div>
-                                ) : suggestions.filter(s => s.suggestedLine).map((suggestion) => (
-                                    <Alert key={suggestion.lineNumber}>
-                                        <Wand2 className="h-4 w-4" />
-                                        <AlertTitle>Linha {suggestion.lineNumber}</AlertTitle>
-                                        <AlertDescription className="space-y-2">
-                                            <div>
-                                                <Badge variant="destructive">Original</Badge>
-                                                <p className="mt-1 text-xs font-mono bg-muted p-2 rounded">{suggestion.originalLine}</p>
-                                            </div>
-                                            <div>
-                                                <Badge variant="secondary" className="bg-green-100 text-green-800">Sugestão</Badge>
-                                                <p className="mt-1 text-xs font-mono bg-muted p-2 rounded">{suggestion.suggestedLine}</p>
-                                            </div>
-                                        </AlertDescription>
-                                    </Alert>
-                                ))}
-                                </div>
-                            </ScrollArea>
-                        </TabsContent>
                     </Tabs>
                 </CardContent>
             </Card>
@@ -929,3 +911,4 @@ export function FileValidator() {
   );
 }
 
+    
