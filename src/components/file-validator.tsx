@@ -703,7 +703,7 @@ export function FileValidator() {
             description: "Houve um erro ao tentar ler o arquivo.",
         });
     }
-    reader.readAsText(file);
+    reader.readAsText(file, 'windows-1252');
   };
   
   const handleSuggestCorrection = async (result: LineResult) => {
@@ -964,4 +964,6 @@ export function FileValidator() {
 }
 
     
+    
+
     
