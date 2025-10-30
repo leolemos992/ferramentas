@@ -521,9 +521,9 @@ export function FileValidator() {
   const [results, setResults] = useState<LineResult[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const [isDragging, setIsDragging] = useState(false);
 
-  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = event.target.files?.[0];
+  const handleFileDrop = (selectedFile: File | undefined) => {
     if (!selectedFile) return;
 
     const isTxt = selectedFile.name.toLowerCase().endsWith(".txt");
@@ -544,6 +544,27 @@ export function FileValidator() {
       setFile(null);
     }
   };
+
+  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    handleFileDrop(event.target.files?.[0]);
+  };
+
+  const handleDragOver = (event: React.DragEvent<HTMLLabelElement>) => {
+    event.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (event: React.DragEvent<HTMLLabelElement>) => {
+    event.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (event: React.DragEvent<HTMLLabelElement>) => {
+    event.preventDefault();
+    setIsDragging(false);
+    handleFileDrop(event.dataTransfer.files?.[0]);
+  };
+
 
   const handleRemoveFile = () => {
     setFile(null);
@@ -648,9 +669,13 @@ export function FileValidator() {
                 <div className="space-y-4">
                 <Label
                     htmlFor="file-upload"
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
                     className={cn(
-                    "flex flex-col items-center justify-center w-full h-40 border-2 border-dashed rounded-lg cursor-pointer bg-card hover:bg-secondary/50 transition-colors",
-                    {"pointer-events-none opacity-50": loading}
+                        "flex flex-col items-center justify-center w-full h-40 border-2 border-dashed rounded-lg cursor-pointer bg-card hover:bg-secondary/50 transition-colors",
+                        { "pointer-events-none opacity-50": loading },
+                        { "bg-secondary/80 border-primary": isDragging }
                     )}
                 >
                     <div className="flex flex-col items-center justify-center pt-5 pb-6">
@@ -768,5 +793,3 @@ export function FileValidator() {
     </div>
   );
 }
-
-    
