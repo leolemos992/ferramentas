@@ -13,7 +13,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { X, CheckCircle, AlertCircle, UploadCloud, FileCheck, Trash2, Loader2, Wrench, FileText, Database } from "lucide-react";
+import { X, CheckCircle, AlertCircle, UploadCloud, FileCheck, Trash2, Loader2, Wrench, ChevronDown } from "lucide-react";
 import { Label } from "./ui/label";
 import { cn } from "@/lib/utils";
 import { Badge } from "./ui/badge";
@@ -21,6 +21,8 @@ import { ScrollArea } from "./ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./ui/collapsible";
+
 
 type FieldRule = {
   name: string;
@@ -560,7 +562,7 @@ function InvalidLinesList({ invalidLines, getHighlightedLine, handleSuggestCorre
     const rowVirtualizer = useVirtualizer({
         count: invalidLines.length,
         getScrollElement: () => parentRef.current,
-        estimateSize: () => 130,
+        estimateSize: () => 170, // Adjusted size for collapsible content
         overscan: 5,
     });
 
@@ -588,16 +590,43 @@ function InvalidLinesList({ invalidLines, getHighlightedLine, handleSuggestCorre
                                 transform: `translateY(${virtualItem.start}px)`,
                             }}
                         >
-                            <div className="p-3 border-l-4 rounded-r-md m-2 bg-red-50/50 border-red-500">
-                                <div className="flex items-start justify-between gap-4">
-                                    <div className="flex-1 overflow-hidden">
-                                        <div className="font-semibold">Linha {result.lineNumber}: <Badge variant="destructive">{result.recordType || 'N/A'}</Badge></div>
-                                        
-                                        <div className="mt-2 p-2 bg-white rounded-md border text-xs">
+                            <Collapsible className="p-3 border-l-4 rounded-r-md m-2 bg-red-50/50 border-red-500">
+                                <div className="flex items-center justify-between gap-4">
+                                    <CollapsibleTrigger className="flex-1 text-left">
+                                        <div className="flex items-center gap-2">
+                                            <div className="font-semibold">Linha {result.lineNumber}: <Badge variant="destructive">{result.recordType || 'N/A'}</Badge></div>
+                                            <p className="text-xs text-red-800 truncate">{result.errors[0]?.message}</p>
+                                            <ChevronDown className="h-4 w-4 transition-transform [&[data-state=open]]:rotate-180" />
+                                        </div>
+                                         <div className="mt-1 p-1 bg-white rounded-md border text-xs font-mono truncate">
+                                            {result.lineContent}
+                                        </div>
+                                    </CollapsibleTrigger>
+                                     <TooltipProvider>
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); handleSuggestCorrection(result); }}>
+                                                    <Wrench className="h-4 w-4"/>
+                                                    <span className="ml-2 hidden md:inline">Sugerir</span>
+                                                </Button>
+                                            </TooltipTrigger>
+                                            <TooltipContent>
+                                                <p>Sugerir correção com base nas regras</p>
+                                            </TooltipContent>
+                                        </Tooltip>
+                                    </TooltipProvider>
+                                </div>
+                                <CollapsibleContent className="mt-4 space-y-3">
+                                    <div>
+                                        <h4 className="font-semibold text-sm mb-1">Linha Original:</h4>
+                                        <div className="p-2 bg-white rounded-md border text-xs">
                                             {getHighlightedLine(result)}
                                         </div>
-
-                                        <ul className="mt-2 space-y-1 list-disc pl-5">
+                                    </div>
+                                    
+                                    <div>
+                                        <h4 className="font-semibold text-sm mb-1">Erros Encontrados:</h4>
+                                        <ul className="space-y-1 list-disc pl-5">
                                             {result.errors.map((error, index) => {
                                                 const fieldName = error.columnIndex >= 0 && result.recordType && validationRules[result.recordType] 
                                                     ? validationRules[result.recordType]?.fields[error.columnIndex]?.name 
@@ -610,30 +639,18 @@ function InvalidLinesList({ invalidLines, getHighlightedLine, handleSuggestCorre
                                             })}
                                         </ul>
                                     </div>
-                                    <TooltipProvider>
-                                        <Tooltip>
-                                            <TooltipTrigger asChild>
-                                                <Button size="sm" variant="outline" onClick={() => handleSuggestCorrection(result)}>
-                                                    <Wrench className="h-4 w-4"/>
-                                                    <span className="ml-2 hidden md:inline">Sugerir</span>
-                                                </Button>
-                                            </TooltipTrigger>
-                                            <TooltipContent>
-                                                <p>Sugerir correção com base nas regras</p>
-                                            </TooltipContent>
-                                        </Tooltip>
-                                    </TooltipProvider>
-                                </div>
-                                {suggestion?.suggestedLine && (
-                                    <Alert className="mt-3">
-                                        <Wrench className="h-4 w-4" />
-                                        <AlertTitle>Sugestão de Correção</AlertTitle>
-                                        <AlertDescription>
-                                            <p className="mt-1 text-xs font-mono bg-muted p-2 rounded">{suggestion.suggestedLine}</p>
-                                        </AlertDescription>
-                                    </Alert>
-                                )}
-                            </div>
+
+                                    {suggestion?.suggestedLine && (
+                                        <Alert>
+                                            <Wrench className="h-4 w-4" />
+                                            <AlertTitle>Sugestão de Correção</AlertTitle>
+                                            <AlertDescription>
+                                                <p className="mt-1 text-xs font-mono bg-muted p-2 rounded">{suggestion.suggestedLine}</p>
+                                            </AlertDescription>
+                                        </Alert>
+                                    )}
+                                </CollapsibleContent>
+                            </Collapsible>
                         </div>
                     );
                 })}
@@ -714,7 +731,7 @@ export function FileValidator() {
     const fields = line.split(";");
     const recordType = fields[0]?.trim();
 
-    if (!recordType) {
+    if (!recordType && line.trim() === '') {
         return { lineNumber, lineContent: line, errors: [] }; // Ignore empty lines
     }
 
@@ -738,7 +755,7 @@ export function FileValidator() {
             }
 
             if (fieldValue) {
-                if (fieldValue.length > fieldRule.maxLength) {
+                if (fieldRule.maxLength !== Infinity && fieldValue.length > fieldRule.maxLength) {
                     lineErrors.push({ message: `Excede o tamanho máximo de ${fieldRule.maxLength} (atual: ${fieldValue.length}).`, columnIndex: index });
                 }
                 
@@ -850,7 +867,7 @@ export function FileValidator() {
             }
 
             // Max Length
-            if (correctedField.length > fieldRule.maxLength) {
+            if (fieldRule.maxLength !== Infinity && correctedField.length > fieldRule.maxLength) {
                 correctedField = correctedField.substring(0, fieldRule.maxLength);
             }
         }
@@ -934,29 +951,18 @@ export function FileValidator() {
     return (
       <div className="font-mono text-xs whitespace-pre-wrap break-all">
         {fields.map((field, index) => {
-          const fieldRule = result.recordType && validationRules[result.recordType] ? validationRules[result.recordType].fields[index] : undefined;
-          const tooltipContent = fieldRule ? `${fieldRule.name} (Max: ${fieldRule.maxLength}, Tipo: ${fieldRule.type})` : `Coluna ${index + 1}`;
-          
+          const isError = errorColumns.includes(index);
           return (
             <React.Fragment key={index}>
-              <TooltipProvider>
-                <Tooltip delayDuration={0}>
-                  <TooltipTrigger asChild>
-                    <span className={cn(
-                      "p-0.5 rounded-sm",
-                      errorColumns.includes(index) ? "bg-red-200 text-red-900" : "bg-gray-100"
-                    )}>
-                      {field}
-                    </span>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>{tooltipContent}</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              <span className={cn(
+                "p-0.5 rounded-sm",
+                isError ? "bg-red-200 text-red-900" : ""
+              )}>
+                {field}
+              </span>
               {index < fields.length - 1 && <span className="text-gray-400 mx-px">;</span>}
             </React.Fragment>
-          )
+          );
         })}
       </div>
     );
@@ -1150,3 +1156,5 @@ export function FileValidator() {
     </div>
   );
 }
+
+    
