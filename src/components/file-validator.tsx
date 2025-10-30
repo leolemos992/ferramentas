@@ -419,7 +419,7 @@ const validationRules: ValidationRules = {
         { name: "Código do produto", type: "C", maxLength: 20, required: true },
         { name: "Unidade de medida", type: "C", maxLength: 3, required: true },
         { name: "Fator de conversão", type: "N", maxLength: 15, decimals: 6, required: true },
-        { name: "Tipo da embalagem", type_of: "C", maxLength: 1, required: true },
+        { name: "Tipo da embalagem", type: "C", maxLength: 1, required: true },
         { name: "Preço", type: "N", maxLength: 15, decimals: 6, required: true },
         { name: "EAN", type: "C", maxLength: 20, required: false },
     ]
