@@ -12,11 +12,14 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { X, CheckCircle, AlertCircle, UploadCloud, FileCheck, Trash2, Loader2 } from "lucide-react";
+import { X, CheckCircle, AlertCircle, UploadCloud, FileCheck, Trash2, Loader2, Wand2 } from "lucide-react";
 import { Label } from "./ui/label";
 import { cn } from "@/lib/utils";
 import { Badge } from "./ui/badge";
 import { ScrollArea } from "./ui/scroll-area";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
+import { suggestCorrection } from "@/ai/flows/suggest-correction-flow";
+import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 
 type FieldRule = {
   name: string;
@@ -251,7 +254,7 @@ const validationRules: ValidationRules = {
         { name: "Complemento de cobrança", type: "C", maxLength: 50, required: false },
         { name: "Bairro de cobrança", type: "C", maxLength: 50, required: false },
         { name: "Campo extra 1", type: "C", maxLength: 512, required: false },
-        { name: "Campo extra 2", type: "C", maxLength: 512, required: false },
+        { name: "Campo extra 2", type_name: "C", maxLength: 512, required: false },
         { name: "Campo extra 3", type: "C", maxLength: 512, required: false },
         { name: "Campo extra 4", type: "C", maxLength: 512, required: false },
         { name: "Campo extra 5", type: "C", maxLength: 512, required: false },
@@ -515,13 +518,22 @@ type LineResult = {
   errors: string[];
 };
 
+type Suggestion = {
+    lineNumber: number;
+    originalLine: string;
+    suggestedLine: string;
+    isLoading: boolean;
+}
+
 export function FileValidator() {
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<LineResult[]>([]);
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const [isDragging, setIsDragging] = useState(false);
+  const [activeTab, setActiveTab] = useState("errors");
 
   const handleFileDrop = (selectedFile: File | undefined) => {
     if (!selectedFile) return;
@@ -532,6 +544,7 @@ export function FileValidator() {
     if (isTxt || isCsv) {
       setFile(selectedFile);
       setResults([]);
+      setSuggestions([]);
     } else {
       toast({
         variant: "destructive",
@@ -569,6 +582,7 @@ export function FileValidator() {
   const handleRemoveFile = () => {
     setFile(null);
     setResults([]);
+    setSuggestions([]);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -594,26 +608,32 @@ export function FileValidator() {
         }
 
         rule.fields.forEach((fieldRule, index) => {
+            if (index >= fields.length) return; // Don't validate fields that don't exist due to wrong field count
             const fieldValue = fields[index]?.trim();
 
             if (fieldRule.required && !fieldValue) {
-                lineErrors.push(`Coluna ${index + 1}: Campo "${fieldRule.name}" é obrigatório e não foi preenchido.`);
+                lineErrors.push(`Coluna ${index + 1} (${fieldRule.name}): Campo obrigatório não preenchido.`);
             }
 
             if (fieldValue) {
                 if (fieldValue.length > fieldRule.maxLength) {
-                    lineErrors.push(`Coluna ${index + 1}: Campo "${fieldRule.name}" excede o tamanho máximo de ${fieldRule.maxLength} caracteres.`);
+                    lineErrors.push(`Coluna ${index + 1} (${fieldRule.name}): Excede o tamanho máximo de ${fieldRule.maxLength} (tamanho atual: ${fieldValue.length}).`);
                 }
                 
                 if (fieldRule.type === 'N') {
-                    const decimalPattern = fieldRule.decimals ? `^\\d*(\\.\\d{1,${fieldRule.decimals}})?$` : '^\\d*$';
-                    if (!new RegExp(decimalPattern).test(fieldValue)) {
-                       lineErrors.push(`Coluna ${index + 1}: Campo "${fieldRule.name}" deve ser um número${fieldRule.decimals ? ` com até ${fieldRule.decimals} casas decimais` : ''}.`);
+                    // Allows dot as decimal separator
+                    if (!/^-?\d*\.?\d*$/.test(fieldValue)) {
+                        lineErrors.push(`Coluna ${index + 1} (${fieldRule.name}): Deve ser um valor numérico.`);
+                    } else if (fieldRule.decimals !== undefined) {
+                        const parts = fieldValue.split('.');
+                        if (parts[1] && parts[1].length > fieldRule.decimals) {
+                           lineErrors.push(`Coluna ${index + 1} (${fieldRule.name}): Deve ter no máximo ${fieldRule.decimals} casas decimais.`);
+                        }
                     }
                 } else if (fieldRule.type === 'D' && !/^\d{8}$/.test(fieldValue)) {
-                    lineErrors.push(`Coluna ${index + 1}: Campo "${fieldRule.name}" deve estar no formato de data AAAAMMDD.`);
+                    lineErrors.push(`Coluna ${index + 1} (${fieldRule.name}): Deve estar no formato de data AAAAMMDD.`);
                 } else if (fieldRule.type === 'T' && !/^\d{14}$/.test(fieldValue)) {
-                    lineErrors.push(`Coluna ${index + 1}: Campo "${fieldRule.name}" deve estar no formato de data/hora AAAAMMDDHHMMSS.`);
+                    lineErrors.push(`Coluna ${index + 1} (${fieldRule.name}): Deve estar no formato de data/hora AAAAMMDDHHMMSS.`);
                 }
             }
         });
@@ -625,6 +645,8 @@ export function FileValidator() {
   const handleValidate = () => {
     if (!file) return;
     setLoading(true);
+    setResults([]);
+    setSuggestions([]);
 
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -633,6 +655,14 @@ export function FileValidator() {
       const validationResults = lines.map((line, index) => validateLine(line, index + 1));
       
       setResults(validationResults);
+      
+      const invalidCount = validationResults.filter(r => r.errors.length > 0).length;
+      if (invalidCount > 0) {
+        setActiveTab("errors");
+      } else {
+        setActiveTab("valid");
+      }
+
       setLoading(false);
     };
     reader.onerror = () => {
@@ -646,12 +676,49 @@ export function FileValidator() {
     reader.readAsText(file);
   };
   
+  const handleSuggestCorrection = async (result: LineResult) => {
+    const { lineNumber, lineContent, recordType, errors } = result;
+    if (!recordType) return;
+  
+    const rule = validationRules[recordType];
+    if (!rule) return;
+    
+    // Set loading state for this specific line
+    setSuggestions(prev => {
+        const existing = prev.find(s => s.lineNumber === lineNumber);
+        if (existing) {
+            return prev.map(s => s.lineNumber === lineNumber ? { ...s, isLoading: true } : s);
+        }
+        return [...prev, { lineNumber, originalLine: lineContent, suggestedLine: "", isLoading: true }];
+    });
+    
+    try {
+        const suggestion = await suggestCorrection({
+            lineContent,
+            recordType,
+            rules: rule.fields,
+            errors,
+        });
+
+        setSuggestions(prev => prev.map(s => s.lineNumber === lineNumber ? { ...s, suggestedLine: suggestion, isLoading: false } : s));
+        toast({ title: "Sugestão Gerada", description: `A sugestão para a linha ${lineNumber} foi criada.` });
+    } catch (error) {
+        console.error("Error getting suggestion:", error);
+        toast({ variant: "destructive", title: "Erro ao Gerar Sugestão", description: "Não foi possível conectar com a IA." });
+        setSuggestions(prev => prev.map(s => s.lineNumber === lineNumber ? { ...s, isLoading: false } : s));
+    }
+  };
+
+  const { validLines, invalidLines } = useMemo(() => {
+    const validLines = results.filter(r => r.lineContent.trim() !== '' && r.errors.length === 0);
+    const invalidLines = results.filter(r => r.errors.length > 0);
+    return { validLines, invalidLines };
+  }, [results]);
+
   const stats = useMemo(() => {
     const totalLines = results.filter(r => r.lineContent.trim() !== '').length;
-    const invalidLines = results.filter(r => r.errors.length > 0).length;
-    const validLines = totalLines - invalidLines;
-    return { totalLines, validLines, invalidLines };
-  }, [results]);
+    return { totalLines, validLines: validLines.length, invalidLines: invalidLines.length };
+  }, [results, validLines, invalidLines]);
 
   return (
     <div className="w-full max-w-5xl mx-auto space-y-6">
@@ -730,7 +797,7 @@ export function FileValidator() {
             </CardContent>
         </Card>
 
-        {results.length > 0 && (
+        {results.length > 0 && !loading && (
             <Card className="animate-in fade-in-50 duration-500">
                 <CardHeader className="flex flex-row items-center justify-between">
                     <div>
@@ -759,37 +826,106 @@ export function FileValidator() {
                         </Card>
                          <Card>
                             <CardHeader className="pb-2">
-                                <CardTitle className="text-sm font-medium">Linhas Inválidas</CardTitle>
+                                <CardTitle className="text-sm font-medium">Linhas com Erro</CardTitle>
                             </CardHeader>
                             <CardContent>
                                 <p className="text-3xl font-bold text-red-600 flex items-center">{stats.invalidLines} <AlertCircle className="ml-2 h-6 w-6"/></p>
                             </CardContent>
                         </Card>
                     </div>
-                    <h3 className="text-lg font-semibold mb-4">Detalhes</h3>
-                     <ScrollArea className="h-96 w-full rounded-md border">
-                        <div className="p-4 font-mono text-sm">
-                        {results.filter(r => r.lineContent.trim() !== '').map((result) => (
-                            <div key={result.lineNumber} className={cn("p-3 border-l-4 rounded-r-md mb-2", result.errors.length > 0 ? 'bg-red-50 border-red-500' : 'bg-green-50 border-green-500')}>
-                                <div className="flex items-center gap-4">
-                                   {result.errors.length > 0 ? <AlertCircle className="h-5 w-5 text-red-500 shrink-0" /> : <CheckCircle className="h-5 w-5 text-green-500 shrink-0" />}
-                                    <div className="font-semibold">Linha {result.lineNumber}: <Badge variant="secondary">{result.recordType || 'N/A'}</Badge></div>
-                                </div>
-                                <p className="truncate mt-1 ml-9 text-muted-foreground">{result.lineContent}</p>
-                                {result.errors.length > 0 && (
-                                    <div className="mt-2 ml-9 space-y-1">
-                                        {result.errors.map((error, index) => (
-                                            <p key={index} className="text-red-700 text-xs">{error}</p>
-                                        ))}
+                    
+                    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                        <TabsList className="grid w-full grid-cols-3">
+                            <TabsTrigger value="errors">Linhas com Erro ({invalidLines.length})</TabsTrigger>
+                            <TabsTrigger value="valid">Linhas Válidas ({validLines.length})</TabsTrigger>
+                            <TabsTrigger value="suggestions">Sugestões de Correção ({suggestions.filter(s => s.suggestedLine).length})</TabsTrigger>
+                        </TabsList>
+                        <TabsContent value="errors" className="mt-4">
+                            <ScrollArea className="h-96 w-full rounded-md border">
+                                <div className="p-4 font-mono text-sm">
+                                {invalidLines.length === 0 ? (
+                                    <div className="flex flex-col items-center justify-center h-full text-center p-8">
+                                        <CheckCircle className="w-12 h-12 text-green-500 mb-4" />
+                                        <h3 className="text-lg font-semibold">Nenhum erro encontrado!</h3>
+                                        <p className="text-muted-foreground">Todas as linhas foram validadas com sucesso.</p>
                                     </div>
-                                )}
-                            </div>
-                        ))}
-                        </div>
-                    </ScrollArea>
+                                ) : invalidLines.map((result) => (
+                                    <div key={result.lineNumber} className="p-3 border-l-4 rounded-r-md mb-2 bg-red-50 border-red-500">
+                                        <div className="flex items-center justify-between gap-4">
+                                            <div className="flex items-center gap-4">
+                                                <AlertCircle className="h-5 w-5 text-red-500 shrink-0" />
+                                                <div className="font-semibold">Linha {result.lineNumber}: <Badge variant="destructive">{result.recordType || 'N/A'}</Badge></div>
+                                            </div>
+                                            <Button size="sm" variant="outline" onClick={() => handleSuggestCorrection(result)} disabled={suggestions.find(s => s.lineNumber === result.lineNumber)?.isLoading}>
+                                                {suggestions.find(s => s.lineNumber === result.lineNumber)?.isLoading ? <Loader2 className="h-4 w-4 animate-spin"/> : <Wand2 className="h-4 w-4"/>}
+                                                <span className="ml-2 hidden md:inline">Sugerir Correção</span>
+                                            </Button>
+                                        </div>
+                                        <p className="truncate mt-2 ml-9 text-muted-foreground">{result.lineContent}</p>
+                                        <div className="mt-2 ml-9 space-y-1">
+                                            {result.errors.map((error, index) => (
+                                                <p key={index} className="text-red-700 text-xs">{error}</p>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ))}
+                                </div>
+                            </ScrollArea>
+                        </TabsContent>
+                        <TabsContent value="valid" className="mt-4">
+                             <ScrollArea className="h-96 w-full rounded-md border">
+                                <div className="p-4 font-mono text-sm">
+                                {validLines.length === 0 ? (
+                                    <div className="flex flex-col items-center justify-center h-full text-center p-8">
+                                        <AlertCircle className="w-12 h-12 text-yellow-500 mb-4" />
+                                        <h3 className="text-lg font-semibold">Nenhuma linha válida.</h3>
+                                        <p className="text-muted-foreground">Verifique a aba de erros para mais detalhes.</p>
+                                    </div>
+                                ) : validLines.map((result) => (
+                                    <div key={result.lineNumber} className="p-3 border-l-4 rounded-r-md mb-2 bg-green-50 border-green-500">
+                                        <div className="flex items-center gap-4">
+                                            <CheckCircle className="h-5 w-5 text-green-500 shrink-0" />
+                                            <div className="font-semibold">Linha {result.lineNumber}: <Badge variant="secondary">{result.recordType || 'N/A'}</Badge></div>
+                                        </div>
+                                        <p className="truncate mt-1 ml-9 text-muted-foreground">{result.lineContent}</p>
+                                    </div>
+                                ))}
+                                </div>
+                            </ScrollArea>
+                        </TabsContent>
+                         <TabsContent value="suggestions" className="mt-4">
+                            <ScrollArea className="h-96 w-full rounded-md border">
+                                <div className="p-4 font-mono text-sm space-y-4">
+                                {suggestions.filter(s => s.suggestedLine).length === 0 ? (
+                                    <div className="flex flex-col items-center justify-center h-full text-center p-8">
+                                        <Wand2 className="w-12 h-12 text-blue-500 mb-4" />
+                                        <h3 className="text-lg font-semibold">Nenhuma sugestão gerada.</h3>
+                                        <p className="text-muted-foreground">Vá para a aba de erros e clique em "Sugerir Correção" para que a IA gere sugestões.</p>
+                                    </div>
+                                ) : suggestions.filter(s => s.suggestedLine).map((suggestion) => (
+                                    <Alert key={suggestion.lineNumber}>
+                                        <Wand2 className="h-4 w-4" />
+                                        <AlertTitle>Linha {suggestion.lineNumber}</AlertTitle>
+                                        <AlertDescription className="space-y-2">
+                                            <div>
+                                                <Badge variant="destructive">Original</Badge>
+                                                <p className="mt-1 text-xs font-mono bg-muted p-2 rounded">{suggestion.originalLine}</p>
+                                            </div>
+                                            <div>
+                                                <Badge variant="secondary" className="bg-green-100 text-green-800">Sugestão</Badge>
+                                                <p className="mt-1 text-xs font-mono bg-muted p-2 rounded">{suggestion.suggestedLine}</p>
+                                            </div>
+                                        </AlertDescription>
+                                    </Alert>
+                                ))}
+                                </div>
+                            </ScrollArea>
+                        </TabsContent>
+                    </Tabs>
                 </CardContent>
             </Card>
         )}
     </div>
   );
 }
+
