@@ -20,6 +20,7 @@ import { ScrollArea } from "./ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { suggestCorrection } from "@/ai/flows/suggest-correction-flow";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 
 type FieldRule = {
   name: string;
@@ -515,7 +516,7 @@ type LineResult = {
   lineNumber: number;
   lineContent: string;
   recordType?: string;
-  errors: string[];
+  errors: { message: string; columnIndex: number }[];
 };
 
 type Suggestion = {
@@ -617,7 +618,7 @@ export function FileValidator() {
   };
 
   const validateLine = (line: string, lineNumber: number): LineResult => {
-    const lineErrors: string[] = [];
+    const lineErrors: LineResult['errors'] = [];
     const fields = line.split(";");
     const recordType = fields[0]?.trim();
 
@@ -627,12 +628,13 @@ export function FileValidator() {
 
     const rule = validationRules[recordType];
     if (!rule) {
-        lineErrors.push(`Coluna 1: Tipo de registro desconhecido '${recordType}'.`);
+        lineErrors.push({ message: `Tipo de registro desconhecido '${recordType}'.`, columnIndex: 0 });
     } else {
         if (fields.length !== rule.fieldCount) {
-            lineErrors.push(
-            `O registro '${recordType}' deve ter ${rule.fieldCount} campos, mas foram encontrados ${fields.length}.`
-            );
+            lineErrors.push({
+                message: `O registro '${recordType}' deve ter ${rule.fieldCount} campos, mas foram encontrados ${fields.length}.`,
+                columnIndex: -1 // General line error
+            });
         }
 
         rule.fields.forEach((fieldRule, index) => {
@@ -640,28 +642,27 @@ export function FileValidator() {
             const fieldValue = fields[index]?.trim();
 
             if (fieldRule.required && !fieldValue) {
-                lineErrors.push(`Coluna ${index + 1} (${fieldRule.name}): Campo obrigatório não preenchido.`);
+                lineErrors.push({ message: `Campo obrigatório não preenchido.`, columnIndex: index });
             }
 
             if (fieldValue) {
                 if (fieldValue.length > fieldRule.maxLength) {
-                    lineErrors.push(`Coluna ${index + 1} (${fieldRule.name}): Excede o tamanho máximo de ${fieldRule.maxLength} (tamanho atual: ${fieldValue.length}).`);
+                    lineErrors.push({ message: `Excede o tamanho máximo de ${fieldRule.maxLength} (atual: ${fieldValue.length}).`, columnIndex: index });
                 }
                 
                 if (fieldRule.type === 'N') {
-                    // Allows dot as decimal separator
                     if (!/^-?\d*\.?\d*$/.test(fieldValue)) {
-                        lineErrors.push(`Coluna ${index + 1} (${fieldRule.name}): Deve ser um valor numérico.`);
+                        lineErrors.push({ message: `Deve ser um valor numérico.`, columnIndex: index });
                     } else if (fieldRule.decimals !== undefined) {
                         const parts = fieldValue.split('.');
                         if (parts[1] && parts[1].length > fieldRule.decimals) {
-                           lineErrors.push(`Coluna ${index + 1} (${fieldRule.name}): Deve ter no máximo ${fieldRule.decimals} casas decimais.`);
+                           lineErrors.push({ message: `Deve ter no máximo ${fieldRule.decimals} casas decimais.`, columnIndex: index });
                         }
                     }
                 } else if (fieldRule.type === 'D' && !/^\d{8}$/.test(fieldValue)) {
-                    lineErrors.push(`Coluna ${index + 1} (${fieldRule.name}): Deve estar no formato de data AAAAMMDD.`);
+                    lineErrors.push({ message: `Deve estar no formato de data AAAAMMDD.`, columnIndex: index });
                 } else if (fieldRule.type === 'T' && !/^\d{14}$/.test(fieldValue)) {
-                    lineErrors.push(`Coluna ${index + 1} (${fieldRule.name}): Deve estar no formato de data/hora AAAAMMDDHHMMSS.`);
+                    lineErrors.push({ message: `Deve estar no formato de data/hora AAAAMMDDHHMMSS.`, columnIndex: index });
                 }
             }
         });
@@ -713,7 +714,6 @@ export function FileValidator() {
     const rule = validationRules[recordType];
     if (!rule) return;
     
-    // Set loading state for this specific line
     setSuggestions(prev => {
         const existing = prev.find(s => s.lineNumber === lineNumber);
         if (existing) {
@@ -723,11 +723,16 @@ export function FileValidator() {
     });
     
     try {
+        const simpleErrors = errors.map(e => {
+            const fieldName = e.columnIndex >= 0 ? rule.fields[e.columnIndex]?.name : 'Linha';
+            return `Coluna ${e.columnIndex + 1} (${fieldName}): ${e.message}`;
+        });
+
         const suggestion = await suggestCorrection({
             lineContent,
             recordType,
             rules: rule.fields,
-            errors,
+            errors: simpleErrors,
         });
 
         setSuggestions(prev => prev.map(s => s.lineNumber === lineNumber ? { ...s, suggestedLine: suggestion, isLoading: false } : s));
@@ -759,7 +764,7 @@ export function FileValidator() {
   }, [results, validLines, invalidLines]);
 
   return (
-    <div className="w-full max-w-5xl mx-auto space-y-6">
+    <div className="w-full max-w-7xl mx-auto space-y-6">
         <Card className="w-full shadow-lg">
             <CardHeader>
                 <CardTitle className="text-2xl font-bold tracking-tight">
@@ -888,44 +893,76 @@ export function FileValidator() {
                         </TabsList>
                         <TabsContent value="errors" className="mt-4">
                             <ScrollArea className="h-96 w-full rounded-md border">
-                                <div className="p-4 font-mono text-sm">
+                                <div className="p-4 text-sm">
                                 {invalidLines.length === 0 ? (
                                     <div className="flex flex-col items-center justify-center h-full text-center p-8">
                                         <CheckCircle className="w-12 h-12 text-green-500 mb-4" />
                                         <h3 className="text-lg font-semibold">Nenhum erro encontrado!</h3>
                                         <p className="text-muted-foreground">Todas as linhas foram validadas com sucesso.</p>
                                     </div>
-                                ) : invalidLines.map((result) => (
-                                    <div key={result.lineNumber} className="p-3 border-l-4 rounded-r-md mb-2 bg-red-50 border-red-500">
-                                        <div className="flex items-start justify-between gap-4">
-                                            <div className="flex items-start gap-4">
-                                                <AlertCircle className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
-                                                <div>
-                                                  <div className="font-semibold">Linha {result.lineNumber}: <Badge variant="destructive">{result.recordType || 'N/A'}</Badge></div>
-                                                  <p className="truncate mt-2 text-muted-foreground">{result.lineContent}</p>
-                                                  <div className="mt-2 space-y-1">
-                                                      {result.errors.map((error, index) => (
-                                                          <p key={index} className="text-red-700 text-xs">{error}</p>
-                                                      ))}
-                                                  </div>
+                                ) : (
+                                    <TooltipProvider>
+                                        {invalidLines.map((result) => (
+                                            <div key={result.lineNumber} className="p-3 border-l-4 rounded-r-md mb-2 bg-red-50/50 border-red-500">
+                                                <div className="flex items-start justify-between gap-4">
+                                                    <div className="flex items-start gap-4 flex-1 overflow-hidden">
+                                                        <AlertCircle className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
+                                                        <div className="flex-1 overflow-hidden">
+                                                            <div className="font-semibold">Linha {result.lineNumber}: <Badge variant="destructive">{result.recordType || 'N/A'}</Badge></div>
+                                                            
+                                                            <div className="flex flex-wrap gap-x-1 items-center mt-2 font-mono text-xs">
+                                                                {result.lineContent.split(';').map((field, index) => {
+                                                                    const fieldErrors = result.errors.filter(e => e.columnIndex === index);
+                                                                    const isError = fieldErrors.length > 0;
+                                                                    const errorMessages = fieldErrors.map(e => e.message).join('\n');
+                                                                    
+                                                                    return (
+                                                                        <React.Fragment key={index}>
+                                                                            <Tooltip delayDuration={0}>
+                                                                                <TooltipTrigger asChild>
+                                                                                    <span className={cn(
+                                                                                        "px-1 py-0.5 rounded-sm whitespace-pre-wrap",
+                                                                                        isError ? "bg-red-200 text-red-900 ring-1 ring-red-500" : "bg-gray-100",
+                                                                                    )}>
+                                                                                        {field || '""'}
+                                                                                    </span>
+                                                                                </TooltipTrigger>
+                                                                                <TooltipContent>
+                                                                                    <p>Coluna {index + 1}: {validationRules[result.recordType!]?.fields[index]?.name || 'N/A'}</p>
+                                                                                    {isError && <p className="text-red-500">{errorMessages}</p>}
+                                                                                </TooltipContent>
+                                                                            </Tooltip>
+                                                                            {index < result.lineContent.split(';').length - 1 && <span className="text-muted-foreground">;</span>}
+                                                                        </React.Fragment>
+                                                                    );
+                                                                })}
+                                                            </div>
+
+                                                            <div className="mt-2 space-y-1">
+                                                                {result.errors.filter(e => e.columnIndex === -1).map((error, index) => (
+                                                                    <p key={`general-${index}`} className="text-red-700 text-xs font-sans">{error.message}</p>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <Button size="sm" variant="outline" onClick={() => handleSuggestCorrection(result)} disabled={!result.recordType || suggestions.find(s => s.lineNumber === result.lineNumber)?.isLoading}>
+                                                        {suggestions.find(s => s.lineNumber === result.lineNumber)?.isLoading ? <Loader2 className="h-4 w-4 animate-spin"/> : <Wand2 className="h-4 w-4"/>}
+                                                        <span className="ml-2 hidden md:inline">Sugerir</span>
+                                                    </Button>
                                                 </div>
+                                                {suggestions.find(s => s.lineNumber === result.lineNumber && s.suggestedLine) && (
+                                                    <Alert className="mt-3">
+                                                        <Wand2 className="h-4 w-4" />
+                                                        <AlertTitle>Sugestão de Correção</AlertTitle>
+                                                        <AlertDescription>
+                                                            <p className="mt-1 text-xs font-mono bg-muted p-2 rounded">{suggestions.find(s => s.lineNumber === result.lineNumber)?.suggestedLine}</p>
+                                                        </AlertDescription>
+                                                    </Alert>
+                                                )}
                                             </div>
-                                            <Button size="sm" variant="outline" onClick={() => handleSuggestCorrection(result)} disabled={suggestions.find(s => s.lineNumber === result.lineNumber)?.isLoading}>
-                                                {suggestions.find(s => s.lineNumber === result.lineNumber)?.isLoading ? <Loader2 className="h-4 w-4 animate-spin"/> : <Wand2 className="h-4 w-4"/>}
-                                                <span className="ml-2 hidden md:inline">Sugerir</span>
-                                            </Button>
-                                        </div>
-                                        {suggestions.find(s => s.lineNumber === result.lineNumber && s.suggestedLine) && (
-                                            <Alert className="mt-3">
-                                                <Wand2 className="h-4 w-4" />
-                                                <AlertTitle>Sugestão de Correção</AlertTitle>
-                                                <AlertDescription>
-                                                    <p className="mt-1 text-xs font-mono bg-muted p-2 rounded">{suggestions.find(s => s.lineNumber === result.lineNumber)?.suggestedLine}</p>
-                                                </AlertDescription>
-                                            </Alert>
-                                        )}
-                                    </div>
-                                ))}
+                                        ))}
+                                    </TooltipProvider>
+                                )}
                                 </div>
                             </ScrollArea>
                         </TabsContent>
@@ -942,7 +979,7 @@ export function FileValidator() {
                                     <div key={result.lineNumber} className="p-3 border-l-4 rounded-r-md mb-2 bg-green-50 border-green-500">
                                         <div className="flex items-center gap-4">
                                             <CheckCircle className="h-5 w-5 text-green-500 shrink-0" />
-                                            <div className="font-semibold">Linha {result.lineNumber}: <Badge variant="secondary">{result.recordType || 'N/A'}</Badge></div>
+                                            <div>Linha {result.lineNumber}: <Badge variant="secondary">{result.recordType || 'N/A'}</Badge></div>
                                         </div>
                                         <p className="truncate mt-1 ml-9 text-muted-foreground">{result.lineContent}</p>
                                     </div>
@@ -962,8 +999,5 @@ export function FileValidator() {
     </div>
   );
 }
-
-    
-    
 
     
