@@ -56,7 +56,7 @@ function TableDetail({ table, onSelectTable }: { table: TableData, onSelectTable
         <Tabs defaultValue="fields" className="w-full">
           <div className="flex items-center">
             <TabsList>
-              <TabsTrigger value="fields">Campos</TabsTrigger>
+              <TabsTrigger value="fields">Colunas</TabsTrigger>
               <TabsTrigger value="fks" disabled={table.foreignKeys.length === 0}>
                 Chaves Estrangeiras ({table.foreignKeys.length})
               </TabsTrigger>
