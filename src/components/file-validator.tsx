@@ -13,7 +13,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { X, CheckCircle, AlertCircle, UploadCloud, FileCheck, Trash2, Loader2, Wand2, FileText, Database } from "lucide-react";
+import { X, CheckCircle, AlertCircle, UploadCloud, FileCheck, Trash2, Loader2, Wand2, FileText, Database, Wrench } from "lucide-react";
 import { Label } from "./ui/label";
 import { cn } from "@/lib/utils";
 import { Badge } from "./ui/badge";
@@ -595,13 +595,15 @@ function InvalidLinesList({ invalidLines, getHighlightedLine, handleSuggestCorre
                                     <div className="flex-1 overflow-hidden">
                                         <div className="font-semibold">Linha {result.lineNumber}: <Badge variant="destructive">{result.recordType || 'N/A'}</Badge></div>
                                         
-                                        <div className="mt-2">
+                                        <div className="mt-2 p-2 bg-white rounded-md border text-xs">
                                             {getHighlightedLine(result)}
                                         </div>
 
                                         <ul className="mt-2 space-y-1 list-disc pl-5">
                                             {result.errors.map((error, index) => {
-                                                const fieldName = error.columnIndex >= 0 ? validationRules[result.recordType!]?.fields[error.columnIndex]?.name : 'Geral';
+                                                const fieldName = error.columnIndex >= 0 && result.recordType && validationRules[result.recordType] 
+                                                    ? validationRules[result.recordType]?.fields[error.columnIndex]?.name 
+                                                    : 'Geral';
                                                 return (
                                                     <li key={index} className="text-red-700 text-xs font-sans">
                                                         <b>{fieldName} (Coluna {error.columnIndex + 1}):</b> {error.message}
@@ -610,10 +612,19 @@ function InvalidLinesList({ invalidLines, getHighlightedLine, handleSuggestCorre
                                             })}
                                         </ul>
                                     </div>
-                                    <Button size="sm" variant="outline" onClick={() => handleSuggestCorrection(result)} disabled={!result.recordType || suggestion?.isLoading}>
-                                        {suggestion?.isLoading ? <Loader2 className="h-4 w-4 animate-spin"/> : <Wand2 className="h-4 w-4"/>}
-                                        <span className="ml-2 hidden md:inline">Sugerir</span>
-                                    </Button>
+                                    <TooltipProvider>
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                <Button size="sm" variant="outline" onClick={() => handleSuggestCorrection(result)} disabled={!result.recordType || suggestion?.isLoading}>
+                                                    {suggestion?.isLoading ? <Loader2 className="h-4 w-4 animate-spin"/> : <Wand2 className="h-4 w-4"/>}
+                                                    <span className="ml-2 hidden md:inline">Sugerir</span>
+                                                </Button>
+                                            </TooltipTrigger>
+                                            <TooltipContent>
+                                                <p>Sugerir correção com IA</p>
+                                            </TooltipContent>
+                                        </Tooltip>
+                                    </TooltipProvider>
                                 </div>
                                 {suggestion?.suggestedLine && (
                                     <Alert className="mt-3">
@@ -827,6 +838,99 @@ export function FileValidator() {
     }
   };
 
+  const correctLine = (lineResult: LineResult): string => {
+    if (lineResult.errors.length === 0) return lineResult.lineContent;
+    
+    const { recordType } = lineResult;
+    const rule = recordType ? validationRules[recordType] : undefined;
+
+    if (!rule) return lineResult.lineContent; // Cannot correct without rules
+
+    let fields = lineResult.lineContent.split(';');
+
+    // Rule 1: Field count
+    if (fields.length < rule.fieldCount) {
+        fields = [...fields, ...Array(rule.fieldCount - fields.length).fill('')];
+    } else if (fields.length > rule.fieldCount) {
+        fields.length = rule.fieldCount;
+    }
+    
+    fields = fields.map((field, index) => {
+        const fieldRule = rule.fields[index];
+        if (!fieldRule) return field;
+
+        let correctedField = field.trim();
+
+        // Rule 2: Required
+        if (fieldRule.required && !correctedField) {
+            if (fieldRule.type === 'N') correctedField = '0';
+            // For C, D, T, it might be better to leave it for manual correction
+            // but for now, we leave it as an empty string which will fail other validations
+            // or put a placeholder if possible. Let's stick with a default for numbers.
+        }
+
+        // Rule 3: Type and Length
+        if (correctedField) {
+            // Type N: Numeric
+            if (fieldRule.type === 'N') {
+                let numericValue = correctedField.replace(/[^0-9.-]/g, '');
+                const parts = numericValue.split('.');
+                if (parts.length > 2) numericValue = parts[0] + '.' + parts.slice(1).join('');
+                if (numericValue.startsWith('.')) numericValue = '0' + numericValue;
+                if (numericValue.endsWith('.')) numericValue = numericValue.slice(0, -1);
+
+                if (fieldRule.decimals !== undefined) {
+                    const number = parseFloat(numericValue);
+                    if (!isNaN(number)) {
+                        numericValue = number.toFixed(fieldRule.decimals);
+                    }
+                }
+                correctedField = numericValue;
+            }
+
+            // Max Length
+            if (correctedField.length > fieldRule.maxLength) {
+                correctedField = correctedField.substring(0, fieldRule.maxLength);
+            }
+        }
+        
+        return correctedField;
+    });
+
+    return fields.join(';');
+  }
+
+  const handleCorrection = () => {
+    if (invalidLines.length === 0) {
+        toast({ title: "Nenhum erro a corrigir", description: "O arquivo já está válido." });
+        return;
+    }
+
+    const originalLines = fileContent.split(/\r?\n/);
+    const correctedLines = originalLines.map((line, index) => {
+        const lineResult = results.find(r => r.lineNumber === index + 1);
+        if (lineResult && lineResult.errors.length > 0) {
+            return correctLine(lineResult);
+        }
+        return line;
+    });
+
+    const correctedContent = correctedLines.join('\n');
+    const blob = new Blob([correctedContent], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const originalFileName = file?.name.replace(/\.[^/.]+$/, "") || "arquivo";
+    a.download = `${originalFileName}_corrigido.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    toast({ title: "Arquivo Corrigido", description: "O download do arquivo corrigido foi iniciado." });
+  };
+
+
   const { validLines, invalidLines } = useMemo(() => {
     const validLines = results.filter(r => r.lineContent.trim() !== '' && r.errors.length === 0);
     const invalidLines = results.filter(r => r.errors.length > 0);
@@ -851,19 +955,32 @@ export function FileValidator() {
     const errorColumns = result.errors.map(e => e.columnIndex);
   
     return (
-      <span className="font-mono text-xs whitespace-pre-wrap">
-        {fields.map((field, index) => (
-          <React.Fragment key={index}>
-            <span
-              className={cn(
-                errorColumns.includes(index) ? "bg-red-200 text-red-900" : ""
-              )}
-            >
-              {field}
-            </span>
-            {index < fields.length - 1 && <span>;</span>}
-          </React.Fragment>
-        ))}
+      <span className="font-mono text-xs whitespace-pre-wrap break-all">
+        {fields.map((field, index) => {
+          const fieldRule = result.recordType && validationRules[result.recordType] ? validationRules[result.recordType].fields[index] : undefined;
+          const tooltipContent = fieldRule ? `${fieldRule.name} (Max: ${fieldRule.maxLength}, Tipo: ${fieldRule.type})` : `Coluna ${index + 1}`;
+          
+          return (
+            <React.Fragment key={index}>
+              <TooltipProvider>
+                <Tooltip delayDuration={0}>
+                  <TooltipTrigger asChild>
+                    <span className={cn(
+                      "p-0.5 rounded-sm",
+                      errorColumns.includes(index) ? "bg-red-200 text-red-900" : "bg-gray-100"
+                    )}>
+                      {field}
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{tooltipContent}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              {index < fields.length - 1 && <span className="text-gray-400 mx-px">;</span>}
+            </React.Fragment>
+          )
+        })}
       </span>
     );
   };
@@ -934,14 +1051,25 @@ export function FileValidator() {
                 )}
                 </div>
 
-                <Button
-                    onClick={handleValidate}
-                    disabled={!file || loading}
-                    className="w-full text-lg py-6 mt-6"
-                >
-                {loading ? <Loader2 className="animate-spin" /> : <FileCheck />}
-                Validar Arquivo
-                </Button>
+                <div className="flex flex-col sm:flex-row gap-2 mt-6">
+                    <Button
+                        onClick={handleValidate}
+                        disabled={!file || loading}
+                        className="w-full text-lg py-6"
+                    >
+                    {loading ? <Loader2 className="animate-spin" /> : <FileCheck />}
+                    Validar Arquivo
+                    </Button>
+                     <Button
+                        onClick={handleCorrection}
+                        disabled={invalidLines.length === 0 || loading}
+                        className="w-full text-lg py-6"
+                        variant="outline"
+                    >
+                        <Wrench className="mr-2"/>
+                        Corrigir e Baixar
+                    </Button>
+                </div>
             </CardContent>
         </Card>
 
@@ -1045,3 +1173,4 @@ export function FileValidator() {
     </div>
   );
 }
+
