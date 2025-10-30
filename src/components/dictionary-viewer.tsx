@@ -10,6 +10,7 @@ import { Button } from './ui/button';
 import { cn } from '@/lib/utils';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetClose } from "@/components/ui/sheet";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { X } from 'lucide-react';
 
 
@@ -51,77 +52,84 @@ function TableDetail({ table, onSelectTable }: { table: TableData, onSelectTable
             <h2 className="text-2xl font-bold">{table.name}</h2>
             <p className="text-muted-foreground">{table.description}</p>
         </header>
-        
-        <Card>
-            <CardHeader>
-                <div className="flex justify-between items-center">
-                    <CardTitle>Campos</CardTitle>
-                    <Input
-                        placeholder="Filtrar colunas..."
-                        value={columnSearchTerm}
-                        onChange={(e) => setColumnSearchTerm(e.target.value)}
-                        className="max-w-xs"
-                    />
-                </div>
-            </CardHeader>
-            <CardContent>
-                <Table>
-                    <TableHeader>
-                    <TableRow>
-                        <TableHead className="w-[200px]">Nome</TableHead>
-                        <TableHead className="w-[150px]">Tipo</TableHead>
-                        <TableHead className="w-[100px]">Tamanho</TableHead>
-                        <TableHead>Descrição</TableHead>
-                    </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                    {filteredFields.map((field, fieldIndex) => (
-                        <TableRow key={fieldIndex}>
-                            <TableCell className="font-mono text-xs">{field.name}</TableCell>
-                            <TableCell><Badge variant="secondary">{field.type}</Badge></TableCell>
-                            <TableCell className="font-mono text-xs">{field.size}</TableCell>
-                            <TableCell>{field.description}</TableCell>
-                        </TableRow>
-                    ))}
-                    </TableBody>
-                </Table>
-                 {filteredFields.length === 0 && <p className='text-center text-muted-foreground pt-8'>Nenhuma coluna encontrada.</p>}
-            </CardContent>
-        </Card>
 
-        {table.foreignKeys.length > 0 && (
+        <Tabs defaultValue="fields" className="w-full">
+          <div className="flex items-center">
+            <TabsList>
+              <TabsTrigger value="fields">Campos</TabsTrigger>
+              <TabsTrigger value="fks" disabled={table.foreignKeys.length === 0}>
+                Chaves Estrangeiras ({table.foreignKeys.length})
+              </TabsTrigger>
+            </TabsList>
+            <div className="ml-auto flex items-center gap-2">
+               <Input
+                  placeholder="Filtrar colunas..."
+                  value={columnSearchTerm}
+                  onChange={(e) => setColumnSearchTerm(e.target.value)}
+                  className="max-w-xs"
+              />
+            </div>
+          </div>
+          <TabsContent value="fields" className="mt-4">
             <Card>
-                <CardHeader>
-                    <CardTitle>Chaves Estrangeiras</CardTitle>
-                </CardHeader>
-                <CardContent>
+                <CardContent className="p-0">
                     <Table>
                         <TableHeader>
                         <TableRow>
-                            <TableHead>Nome</TableHead>
-                            <TableHead>Coluna</TableHead>
-                            <TableHead>Tabela Relacionada</TableHead>
-                            <TableHead>Coluna Relacionada</TableHead>
+                            <TableHead className="w-[200px]">Nome</TableHead>
+                            <TableHead className="w-[150px]">Tipo</TableHead>
+                            <TableHead className="w-[100px]">Tamanho</TableHead>
+                            <TableHead>Descrição</TableHead>
                         </TableRow>
                         </TableHeader>
                         <TableBody>
-                        {table.foreignKeys.map((fk, fkIndex) => (
-                            <TableRow key={fkIndex}>
-                            <TableCell className="font-mono text-xs">{fk.name}</TableCell>
-                            <TableCell className="font-mono text-xs">{fk.column}</TableCell>
-                            <TableCell>
-                                <Button variant="link" className="p-0 h-auto font-mono text-xs" onClick={() => onSelectTable(fk.relatedTable)}>
-                                    {fk.relatedTable}
-                                </Button>
-                            </TableCell>
-                            <TableCell className="font-mono text-xs">{fk.relatedColumn}</TableCell>
+                        {filteredFields.map((field, fieldIndex) => (
+                            <TableRow key={fieldIndex}>
+                                <TableCell className="font-mono text-xs">{field.name}</TableCell>
+                                <TableCell><Badge variant="secondary">{field.type}</Badge></TableCell>
+                                <TableCell className="font-mono text-xs">{field.size}</TableCell>
+                                <TableCell>{field.description}</TableCell>
                             </TableRow>
                         ))}
                         </TableBody>
                     </Table>
+                     {filteredFields.length === 0 && <p className='text-center text-muted-foreground p-8'>Nenhuma coluna encontrada.</p>}
                 </CardContent>
             </Card>
-        )}
+          </TabsContent>
+          <TabsContent value="fks" className="mt-4">
+             {table.foreignKeys.length > 0 && (
+                <Card>
+                    <CardContent className="p-0">
+                        <Table>
+                            <TableHeader>
+                            <TableRow>
+                                <TableHead>Nome</TableHead>
+                                <TableHead>Coluna</TableHead>
+                                <TableHead>Tabela Relacionada</TableHead>
+                                <TableHead>Coluna Relacionada</TableHead>
+                            </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                            {table.foreignKeys.map((fk, fkIndex) => (
+                                <TableRow key={fkIndex}>
+                                <TableCell className="font-mono text-xs">{fk.name}</TableCell>
+                                <TableCell className="font-mono text-xs">{fk.column}</TableCell>
+                                <TableCell>
+                                    <Button variant="link" className="p-0 h-auto font-mono text-xs" onClick={() => onSelectTable(fk.relatedTable)}>
+                                        {fk.relatedTable}
+                                    </Button>
+                                </TableCell>
+                                <TableCell className="font-mono text-xs">{fk.relatedColumn}</TableCell>
+                                </TableRow>
+                            ))}
+                            </TableBody>
+                        </Table>
+                    </CardContent>
+                </Card>
+            )}
+          </TabsContent>
+        </Tabs>
     </div>
   );
 }
