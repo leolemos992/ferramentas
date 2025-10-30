@@ -21,7 +21,27 @@ type ValidationRules = {
 };
 
 const validationRules: ValidationRules = {
+  OP: 34,
+  IT: 22,
+  PG: 14,
+  RC: 10,
+  CO: 10,
+  XL: 2,
+  INT: 5,
+  RZ: 13,
+  TP: 5,
+  CL: 64,
   PR: 93,
+  VR: 6,
+  PB: 4,
+  PS: 3,
+  NCM: 9,
+  EM: 7,
+  ES: 8,
+  DV: 27,
+  ID: 14,
+  US: 7,
+  CP: 5,
 };
 
 export function FileValidator() {
@@ -82,6 +102,7 @@ export function FileValidator() {
 
         if (recordType in validationRules) {
           const expectedFields = validationRules[recordType];
+          // The number of fields should be one more than the max position because position is 1-based
           if (fields.length !== expectedFields) {
             validationErrors.push(
               `Linha ${lineNumber}: O registro '${recordType}' deve ter ${expectedFields} campos, mas tem ${fields.length}.`
