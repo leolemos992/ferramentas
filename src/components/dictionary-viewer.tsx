@@ -53,6 +53,13 @@ export function DictionaryViewer({ tables }: DictionaryViewerProps) {
     );
   }, [selectedTable, columnSearchTerm]);
 
+  const handleSelectTable = (tableName: string) => {
+    const tableToSelect = tables.find(t => t.name.toLowerCase() === tableName.toLowerCase());
+    if (tableToSelect) {
+      setSelectedTable(tableToSelect);
+    }
+  };
+
   return (
     <div className="flex h-[calc(100vh-22rem)] border rounded-lg bg-card text-card-foreground">
       <aside className="w-1/4 min-w-[250px] border-r flex flex-col">
@@ -151,7 +158,11 @@ export function DictionaryViewer({ tables }: DictionaryViewerProps) {
                                         <TableRow key={fkIndex}>
                                         <TableCell className="font-mono text-xs">{fk.name}</TableCell>
                                         <TableCell className="font-mono text-xs">{fk.column}</TableCell>
-                                        <TableCell className="font-mono text-xs">{fk.relatedTable}</TableCell>
+                                        <TableCell>
+                                            <Button variant="link" className="p-0 h-auto font-mono text-xs" onClick={() => handleSelectTable(fk.relatedTable)}>
+                                                {fk.relatedTable}
+                                            </Button>
+                                        </TableCell>
                                         <TableCell className="font-mono text-xs">{fk.relatedColumn}</TableCell>
                                         </TableRow>
                                     ))}
