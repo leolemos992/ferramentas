@@ -13,7 +13,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { X, CheckCircle, AlertCircle, UploadCloud, FileCheck, Trash2, Loader2, Wrench, ChevronDown } from "lucide-react";
+import { X, CheckCircle, AlertCircle, UploadCloud, FileCheck, Trash2, Loader2, Wrench, ChevronDown, Download } from "lucide-react";
 import { Label } from "./ui/label";
 import { cn } from "@/lib/utils";
 import { Badge } from "./ui/badge";
@@ -21,7 +21,7 @@ import { ScrollArea } from "./ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./ui/collapsible";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "./ui/alert-dialog";
 
 
 type FieldRule = {
@@ -419,7 +419,7 @@ const validationRules: ValidationRules = {
         { name: "Código do produto", type: "C", maxLength: 20, required: true },
         { name: "Unidade de medida", type: "C", maxLength: 3, required: true },
         { name: "Fator de conversão", type: "N", maxLength: 15, decimals: 6, required: true },
-        { name: "Tipo da embalagem", type: "C", maxLength: 1, required: true },
+        { name: "Tipo da embalagem", type_of: "C", maxLength: 1, required: true },
         { name: "Preço", type: "N", maxLength: 15, decimals: 6, required: true },
         { name: "EAN", type: "C", maxLength: 20, required: false },
     ]
@@ -551,23 +551,36 @@ const recordTypeNames: { [key: string]: string } = {
 };
 
 
-function InvalidLinesList({ invalidLines, getHighlightedLine, handleSuggestCorrection, suggestions }: {
+function InvalidLinesList({ invalidLines }: {
     invalidLines: LineResult[];
-    getHighlightedLine: (result: LineResult) => React.ReactNode;
-    handleSuggestCorrection: (result: LineResult) => void;
-    suggestions: Suggestion[];
 }) {
     const parentRef = React.useRef<HTMLDivElement>(null);
 
     const rowVirtualizer = useVirtualizer({
         count: invalidLines.length,
         getScrollElement: () => parentRef.current,
-        estimateSize: () => 170, // Adjusted size for collapsible content
+        estimateSize: () => 88,
         overscan: 5,
     });
 
+    const getHighlightedLine = (result: LineResult) => {
+      const fields = result.lineContent.split(';');
+      const errorColumns = result.errors.map(e => e.columnIndex);
+    
+      return (
+        <div className="font-mono text-xs whitespace-pre-wrap break-all">
+          {fields.map((field, index) => (
+              <span key={index} className={cn(errorColumns.includes(index) ? "bg-red-200 text-red-900 rounded-sm p-0.5" : "")}>
+                {field}{index < fields.length - 1 && <span className="text-gray-400 mx-px">;</span>}
+              </span>
+            )
+          )}
+        </div>
+      );
+    };
+
     return (
-        <div ref={parentRef} className="h-96 w-full rounded-md border overflow-y-auto">
+        <div ref={parentRef} className="h-96 w-full rounded-md border overflow-y-auto relative">
             <div
                 style={{
                     height: `${rowVirtualizer.getTotalSize()}px`,
@@ -577,80 +590,44 @@ function InvalidLinesList({ invalidLines, getHighlightedLine, handleSuggestCorre
             >
                 {rowVirtualizer.getVirtualItems().map((virtualItem) => {
                     const result = invalidLines[virtualItem.index];
-                    const suggestion = suggestions.find(s => s.lineNumber === result.lineNumber);
 
                     return (
                         <div
                             key={virtualItem.key}
-                            style={{
+                             style={{
                                 position: 'absolute',
                                 top: 0,
                                 left: 0,
                                 width: '100%',
                                 transform: `translateY(${virtualItem.start}px)`,
                             }}
+                            className="p-3 border-b"
                         >
-                            <Collapsible className="p-3 border-l-4 rounded-r-md m-2 bg-red-50/50 border-red-500">
-                                <div className="flex items-center justify-between gap-4">
-                                    <CollapsibleTrigger className="flex-1 text-left">
-                                        <div className="flex items-center gap-2">
-                                            <div className="font-semibold">Linha {result.lineNumber}: <Badge variant="destructive">{result.recordType || 'N/A'}</Badge></div>
-                                            <p className="text-xs text-red-800 truncate">{result.errors[0]?.message}</p>
-                                            <ChevronDown className="h-4 w-4 transition-transform [&[data-state=open]]:rotate-180" />
-                                        </div>
-                                         <div className="mt-1 p-1 bg-white rounded-md border text-xs font-mono truncate">
-                                            {result.lineContent}
-                                        </div>
-                                    </CollapsibleTrigger>
-                                     <TooltipProvider>
-                                        <Tooltip>
-                                            <TooltipTrigger asChild>
-                                                <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); handleSuggestCorrection(result); }}>
-                                                    <Wrench className="h-4 w-4"/>
-                                                    <span className="ml-2 hidden md:inline">Sugerir</span>
-                                                </Button>
-                                            </TooltipTrigger>
-                                            <TooltipContent>
-                                                <p>Sugerir correção com base nas regras</p>
-                                            </TooltipContent>
-                                        </Tooltip>
-                                    </TooltipProvider>
-                                </div>
-                                <CollapsibleContent className="mt-4 space-y-3">
-                                    <div>
-                                        <h4 className="font-semibold text-sm mb-1">Linha Original:</h4>
-                                        <div className="p-2 bg-white rounded-md border text-xs">
-                                            {getHighlightedLine(result)}
-                                        </div>
+                            <div className="flex items-start justify-between gap-4">
+                               <div className="flex-1">
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <div className="font-semibold text-sm">Linha {result.lineNumber}:</div>
+                                        <Badge variant="destructive">{result.recordType || 'N/A'}</Badge>
                                     </div>
-                                    
-                                    <div>
-                                        <h4 className="font-semibold text-sm mb-1">Erros Encontrados:</h4>
-                                        <ul className="space-y-1 list-disc pl-5">
-                                            {result.errors.map((error, index) => {
-                                                const fieldName = error.columnIndex >= 0 && result.recordType && validationRules[result.recordType] 
-                                                    ? validationRules[result.recordType]?.fields[error.columnIndex]?.name 
-                                                    : 'Geral';
-                                                return (
-                                                    <li key={index} className="text-red-700 text-xs font-sans">
-                                                        <b>{fieldName} (Coluna {error.columnIndex + 1}):</b> {error.message}
-                                                    </li>
-                                                )
-                                            })}
-                                        </ul>
+                                     <div className="mt-1 p-2 bg-secondary/50 rounded-md border text-xs font-mono">
+                                        {getHighlightedLine(result)}
                                     </div>
-
-                                    {suggestion?.suggestedLine && (
-                                        <Alert>
-                                            <Wrench className="h-4 w-4" />
-                                            <AlertTitle>Sugestão de Correção</AlertTitle>
-                                            <AlertDescription>
-                                                <p className="mt-1 text-xs font-mono bg-muted p-2 rounded">{suggestion.suggestedLine}</p>
-                                            </AlertDescription>
-                                        </Alert>
-                                    )}
-                                </CollapsibleContent>
-                            </Collapsible>
+                               </div>
+                            </div>
+                            <div className="mt-2 pl-1">
+                                <h4 className="font-semibold text-sm mb-1 text-red-800">Erros Encontrados:</h4>
+                                <ul className="space-y-1 list-disc pl-5">
+                                    {result.errors.map((error, index) => {
+                                        const fieldRule = result.recordType ? validationRules[result.recordType]?.fields[error.columnIndex] : null;
+                                        const fieldName = fieldRule ? fieldRule.name : 'Geral';
+                                        return (
+                                            <li key={index} className="text-red-700 text-xs font-sans">
+                                                <b>{fieldName} (Campo {error.columnIndex + 1}):</b> {error.message}
+                                            </li>
+                                        )
+                                    })}
+                                </ul>
+                            </div>
                         </div>
                     );
                 })}
@@ -665,11 +642,12 @@ export function FileValidator() {
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<LineResult[]>([]);
   const [fileContent, setFileContent] = useState("");
-  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const [isDragging, setIsDragging] = useState(false);
   const [activeTab, setActiveTab] = useState("errors");
+  const [isConfirmingCorrection, setIsConfirmingCorrection] = useState(false);
+
 
   const handleFileDrop = (selectedFile: File | undefined) => {
     if (!selectedFile) return;
@@ -680,7 +658,6 @@ export function FileValidator() {
     if (isTxt || isCsv) {
       setFile(selectedFile);
       setResults([]);
-      setSuggestions([]);
       setFileContent("");
     } else {
       toast({
@@ -719,7 +696,6 @@ export function FileValidator() {
   const handleRemoveFile = () => {
     setFile(null);
     setResults([]);
-    setSuggestions([]);
     setFileContent("");
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
@@ -784,7 +760,6 @@ export function FileValidator() {
     if (!file) return;
     setLoading(true);
     setResults([]);
-    setSuggestions([]);
     setFileContent("");
 
     const reader = new FileReader();
@@ -842,14 +817,10 @@ export function FileValidator() {
         // Rule 2: Required
         if (fieldRule.required && !correctedField) {
             if (fieldRule.type === 'N') correctedField = '0';
-            // For C, D, T, it might be better to leave it for manual correction
-            // but for now, we leave it as an empty string which will fail other validations
-            // or put a placeholder if possible. Let's stick with a default for numbers.
         }
 
         // Rule 3: Type and Length
         if (correctedField) {
-            // Type N: Numeric
             if (fieldRule.type === 'N') {
                 let numericValue = correctedField.replace(/[^0-9.-]/g, '');
                 const parts = numericValue.split('.');
@@ -878,25 +849,14 @@ export function FileValidator() {
     return fields.join(';');
   }
   
-  const handleSuggestCorrection = (result: LineResult) => {
-    const { lineNumber } = result;
-    const suggestion = correctLine(result);
-
-    setSuggestions(prev => {
-        const existing = prev.find(s => s.lineNumber === lineNumber);
-        if (existing) {
-            // Se já existe, atualiza a sugestão
-            return prev.map(s => s.lineNumber === lineNumber ? { ...s, suggestedLine: suggestion } : s);
-        }
-        // Se não existe, adiciona
-        return [...prev, { lineNumber, suggestedLine: suggestion }];
-    });
-    toast({ title: "Sugestão Gerada", description: `A sugestão para a linha ${lineNumber} foi criada.` });
+  const handleConfirmCorrection = () => {
+    setIsConfirmingCorrection(true);
   };
-
-  const handleCorrection = () => {
+  
+  const handleProceedWithCorrection = () => {
     if (invalidLines.length === 0) {
         toast({ title: "Nenhum erro a corrigir", description: "O arquivo já está válido." });
+        setIsConfirmingCorrection(false);
         return;
     }
 
@@ -922,6 +882,7 @@ export function FileValidator() {
     URL.revokeObjectURL(url);
     
     toast({ title: "Arquivo Corrigido", description: "O download do arquivo corrigido foi iniciado." });
+    setIsConfirmingCorrection(false);
   };
 
 
@@ -943,30 +904,6 @@ export function FileValidator() {
         recordTypes: recordTypeNamesFound || 'Nenhum'
     };
   }, [results, validLines, invalidLines]);
-
-  const getHighlightedLine = (result: LineResult) => {
-    const fields = result.lineContent.split(';');
-    const errorColumns = result.errors.map(e => e.columnIndex);
-  
-    return (
-      <div className="font-mono text-xs whitespace-pre-wrap break-all">
-        {fields.map((field, index) => {
-          const isError = errorColumns.includes(index);
-          return (
-            <React.Fragment key={index}>
-              <span className={cn(
-                "p-0.5 rounded-sm",
-                isError ? "bg-red-200 text-red-900" : ""
-              )}>
-                {field}
-              </span>
-              {index < fields.length - 1 && <span className="text-gray-400 mx-px">;</span>}
-            </React.Fragment>
-          );
-        })}
-      </div>
-    );
-  };
 
   return (
     <div className="w-full max-w-7xl mx-auto space-y-6">
@@ -1044,7 +981,7 @@ export function FileValidator() {
                     Validar Arquivo
                     </Button>
                      <Button
-                        onClick={handleCorrection}
+                        onClick={handleConfirmCorrection}
                         disabled={invalidLines.length === 0 || loading}
                         className="w-full text-lg py-6"
                         variant="outline"
@@ -1117,9 +1054,6 @@ export function FileValidator() {
                             ) : (
                                 <InvalidLinesList 
                                     invalidLines={invalidLines}
-                                    getHighlightedLine={getHighlightedLine}
-                                    handleSuggestCorrection={handleSuggestCorrection}
-                                    suggestions={suggestions}
                                 />
                             )}
                         </TabsContent>
@@ -1133,9 +1067,9 @@ export function FileValidator() {
                                         <p className="text-muted-foreground">Verifique a aba de erros para mais detalhes.</p>
                                     </div>
                                 ) : validLines.map((result) => (
-                                    <div key={result.lineNumber} className="p-3 border-l-4 rounded-r-md mb-2 bg-green-50 border-green-500">
+                                    <div key={result.lineNumber} className="p-3 border-l-4 rounded-r-md mb-2 bg-green-50/80 border-green-500">
                                         <div className="flex items-center gap-4">
-                                            <CheckCircle className="h-5 w-5 text-green-500 shrink-0" />
+                                            <CheckCircle className="h-5 w-5 text-green-600 shrink-0" />
                                             <div>Linha {result.lineNumber}: <Badge variant="secondary">{result.recordType || 'N/A'}</Badge></div>
                                         </div>
                                         <div className="font-mono text-xs whitespace-pre-wrap break-all truncate mt-1 ml-9 text-muted-foreground">{result.lineContent}</div>
@@ -1153,8 +1087,30 @@ export function FileValidator() {
                 </CardContent>
             </Card>
         )}
+         <AlertDialog open={isConfirmingCorrection} onOpenChange={setIsConfirmingCorrection}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                <AlertDialogTitle>Confirmar Correção e Download</AlertDialogTitle>
+                <AlertDialogDescription>
+                    {`Você está prestes a corrigir um arquivo com ${invalidLines.length} linha(s) com erro. A ferramenta tentará aplicar as seguintes correções:`}
+                    <ul className="list-disc pl-5 mt-2 text-sm text-muted-foreground">
+                        <li>Ajustará o número de campos (colunas) para o esperado.</li>
+                        <li>Removerá caracteres excedentes em campos com tamanho máximo.</li>
+                        <li>Corrigirá a formatação de campos numéricos (casas decimais).</li>
+                        <li>Preencherá campos obrigatórios vazios com valores padrão.</li>
+                    </ul>
+                    <p className="mt-2">Um novo arquivo chamado <code className="bg-muted px-1 py-0.5 rounded text-foreground">{`${file?.name.replace(/\.[^/.]+$/, "") || "arquivo"}_corrigido.txt`}</code> será baixado. Deseja continuar?</p>
+                </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction onClick={handleProceedWithCorrection}>
+                    <Download className="mr-2 h-4 w-4" />
+                    Continuar e Baixar
+                </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
     </div>
   );
 }
-
-    
