@@ -258,7 +258,7 @@ export function DictionaryManager() {
   }
 
   return (
-    <div className="w-full max-w-screen-2xl mx-auto p-4 sm:p-6 md:p-8">
+    <div className="w-full">
       <header className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold">Analisador de Dicionário de Dados</h1>
         <Button variant="outline" onClick={handleUploadClick}>
