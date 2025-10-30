@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo, ChangeEvent } from "react";
@@ -111,7 +112,7 @@ export function DictionaryComparison() {
         }
       };
       reader.onerror = reject;
-      reader.readAsText(file);
+      reader.readAsText(file, "latin1");
     });
   }
 

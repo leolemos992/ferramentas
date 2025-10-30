@@ -159,7 +159,7 @@ export function DictionaryManager() {
       });
     }
 
-    reader.readAsText(fileToParse);
+    reader.readAsText(fileToParse, "latin1");
   };
 
   const handleGlobalSearch = () => {

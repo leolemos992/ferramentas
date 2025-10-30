@@ -710,10 +710,10 @@ export function FileValidator() {
                 }
                 
                 if (fieldRule.type === 'N') {
-                    if (!/^-?\d*\.?\d*$/.test(fieldValue)) {
+                    if (!/^-?\d*[,.]?\d*$/.test(fieldValue.replace(/\./g, ''))) { // Allow dot for thousands and comma for decimal
                         lineErrors.push({ message: `Deve ser um valor numérico.`, columnIndex: index });
                     } else if (fieldRule.decimals !== undefined) {
-                        const parts = fieldValue.split('.');
+                        const parts = fieldValue.split(',');
                         if (parts[1] && parts[1].length > fieldRule.decimals) {
                            lineErrors.push({ message: `Deve ter no máximo ${fieldRule.decimals} casas decimais.`, columnIndex: index });
                         }
@@ -762,7 +762,7 @@ export function FileValidator() {
             description: "Houve um erro ao tentar ler o arquivo.",
         });
     }
-    reader.readAsText(file);
+    reader.readAsText(file, "latin1");
   };
   
   const correctLine = (lineResult: LineResult): string => {
@@ -796,19 +796,19 @@ export function FileValidator() {
         // Rule 3: Type and Length
         if (correctedField) {
             if (fieldRule.type === 'N') {
-                let numericValue = correctedField.replace(/[^0-9.-]/g, '');
+                let numericValue = correctedField.replace(/[^0-9,-]/g, '').replace(',', '.');
                 const parts = numericValue.split('.');
                 if (parts.length > 2) numericValue = parts[0] + '.' + parts.slice(1).join('');
                 if (numericValue.startsWith('.')) numericValue = '0' + numericValue;
                 if (numericValue.endsWith('.')) numericValue = numericValue.slice(0, -1);
-
+                
                 if (fieldRule.decimals !== undefined) {
                     const number = parseFloat(numericValue);
                     if (!isNaN(number)) {
                         numericValue = number.toFixed(fieldRule.decimals);
                     }
                 }
-                correctedField = numericValue;
+                correctedField = numericValue.replace('.', ',');
             }
 
             // Max Length
@@ -844,7 +844,7 @@ export function FileValidator() {
     });
 
     const correctedContent = correctedLines.join('\n');
-    const blob = new Blob([correctedContent], { type: 'text/plain;charset=utf-8' });
+    const blob = new Blob([correctedContent], { type: 'text/plain;charset=latin1' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
