@@ -12,7 +12,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { X, CheckCircle, AlertCircle, UploadCloud, FileCheck, Trash2, Loader2, Wand2 } from "lucide-react";
+import { X, CheckCircle, AlertCircle, UploadCloud, FileCheck, Trash2, Loader2, Wand2, FileText, Database } from "lucide-react";
 import { Label } from "./ui/label";
 import { cn } from "@/lib/utils";
 import { Badge } from "./ui/badge";
@@ -525,10 +525,36 @@ type Suggestion = {
     isLoading: boolean;
 }
 
+const recordTypeNames: { [key: string]: string } = {
+    OP: "Operação",
+    IT: "Itens Vendidos",
+    PG: "Meios de Pagamento",
+    RC: "Recebimento",
+    CO: "Cancelamento",
+    XL: "XML",
+    INT: "Inutilização",
+    RZ: "Redução Z",
+    TP: "Totalizador",
+    CL: "Clientes",
+    PR: "Produtos",
+    VR: "Variação",
+    PB: "Cód. Barras",
+    PS: "Similares",
+    NCM: "NCM",
+    EM: "Embalagens",
+    ES: "Estoque",
+    DV: "DAV",
+    ID: "Item DAV",
+    US: "Usuários",
+    CP: "Cond. Pagamento",
+};
+
+
 export function FileValidator() {
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<LineResult[]>([]);
+  const [fileContent, setFileContent] = useState("");
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
@@ -545,6 +571,7 @@ export function FileValidator() {
       setFile(selectedFile);
       setResults([]);
       setSuggestions([]);
+      setFileContent("");
     } else {
       toast({
         variant: "destructive",
@@ -583,6 +610,7 @@ export function FileValidator() {
     setFile(null);
     setResults([]);
     setSuggestions([]);
+    setFileContent("");
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -647,10 +675,12 @@ export function FileValidator() {
     setLoading(true);
     setResults([]);
     setSuggestions([]);
+    setFileContent("");
 
     const reader = new FileReader();
     reader.onload = (e) => {
       const content = e.target?.result as string;
+      setFileContent(content);
       const lines = content.split(/\r?\n/);
       const validationResults = lines.map((line, index) => validateLine(line, index + 1));
       
@@ -717,7 +747,15 @@ export function FileValidator() {
 
   const stats = useMemo(() => {
     const totalLines = results.filter(r => r.lineContent.trim() !== '').length;
-    return { totalLines, validLines: validLines.length, invalidLines: invalidLines.length };
+    const recordTypes = [...new Set(results.map(r => r.recordType).filter(Boolean))];
+    const recordTypeNamesFound = recordTypes.map(rt => recordTypeNames[rt!] || rt).join(', ');
+
+    return { 
+        totalLines, 
+        validLines: validLines.length, 
+        invalidLines: invalidLines.length,
+        recordTypes: recordTypeNamesFound || 'Nenhum'
+    };
   }, [results, validLines, invalidLines]);
 
   return (
@@ -807,7 +845,7 @@ export function FileValidator() {
                     <Button variant="outline" onClick={handleRemoveFile}><Trash2 className="mr-2"/> Limpar Resultados</Button>
                 </CardHeader>
                 <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                          <Card>
                             <CardHeader className="pb-2">
                                 <CardTitle className="text-sm font-medium">Total de Linhas</CardTitle>
@@ -832,12 +870,21 @@ export function FileValidator() {
                                 <p className="text-3xl font-bold text-red-600 flex items-center">{stats.invalidLines} <AlertCircle className="ml-2 h-6 w-6"/></p>
                             </CardContent>
                         </Card>
+                        <Card>
+                            <CardHeader className="pb-2">
+                                <CardTitle className="text-sm font-medium">Tipos de Registro</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-sm font-bold truncate" title={stats.recordTypes}>{stats.recordTypes}</div>
+                            </CardContent>
+                        </Card>
                     </div>
                     
                     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                        <TabsList className="grid w-full grid-cols-2">
+                        <TabsList className="grid w-full grid-cols-3">
                             <TabsTrigger value="errors">Linhas com Erro ({invalidLines.length})</TabsTrigger>
                             <TabsTrigger value="valid">Linhas Válidas ({validLines.length})</TabsTrigger>
+                            <TabsTrigger value="file">Arquivo</TabsTrigger>
                         </TabsList>
                         <TabsContent value="errors" className="mt-4">
                             <ScrollArea className="h-96 w-full rounded-md border">
@@ -903,6 +950,11 @@ export function FileValidator() {
                                 </div>
                             </ScrollArea>
                         </TabsContent>
+                         <TabsContent value="file" className="mt-4">
+                            <ScrollArea className="h-96 w-full rounded-md border">
+                                <pre className="p-4 text-sm whitespace-pre-wrap">{fileContent}</pre>
+                            </ScrollArea>
+                        </TabsContent>
                     </Tabs>
                 </CardContent>
             </Card>
@@ -911,4 +963,5 @@ export function FileValidator() {
   );
 }
 
+    
     
