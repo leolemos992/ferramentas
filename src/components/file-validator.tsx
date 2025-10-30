@@ -703,7 +703,7 @@ export function FileValidator() {
             description: "Houve um erro ao tentar ler o arquivo.",
         });
     }
-    reader.readAsText(file, 'windows-1252');
+    reader.readAsText(file);
   };
   
   const handleSuggestCorrection = async (result: LineResult) => {
@@ -859,7 +859,7 @@ export function FileValidator() {
                                 <CardTitle className="text-sm font-medium">Linhas Válidas</CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <p className="text-3xl font-bold text-green-600 flex items-center">{stats.validLines} <CheckCircle className="ml-2 h-6 w-6"/> </p>
+                                <div className="text-3xl font-bold text-green-600 flex items-center">{stats.validLines} <CheckCircle className="ml-2 h-6 w-6"/> </div>
                             </CardContent>
                         </Card>
                          <Card>
@@ -867,7 +867,7 @@ export function FileValidator() {
                                 <CardTitle className="text-sm font-medium">Linhas com Erro</CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <p className="text-3xl font-bold text-red-600 flex items-center">{stats.invalidLines} <AlertCircle className="ml-2 h-6 w-6"/></p>
+                                <div className="text-3xl font-bold text-red-600 flex items-center">{stats.invalidLines} <AlertCircle className="ml-2 h-6 w-6"/></div>
                             </CardContent>
                         </Card>
                         <Card>
