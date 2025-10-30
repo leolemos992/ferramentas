@@ -6,13 +6,15 @@ import { ArrowLeft } from "lucide-react";
 
 export default function ValidatorPage() {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-4 sm:p-8 md:p-12 relative">
-       <Link href="/" className="absolute top-4 left-4">
+    <main className="flex min-h-screen flex-col items-start justify-start bg-muted/40 p-4 sm:p-6 md:p-8">
+      <div className="w-full max-w-screen-2xl mx-auto">
+        <Link href="/" className="mb-4 inline-block">
           <Button variant="outline">
             <ArrowLeft className="mr-2 h-4 w-4" /> Voltar
           </Button>
         </Link>
-      <FileValidator />
+        <FileValidator />
+      </div>
       <Toaster />
     </main>
   );
