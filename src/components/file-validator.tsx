@@ -2,7 +2,6 @@
 "use client";
 
 import React, { useState, useRef, type ChangeEvent, useMemo } from "react";
-import { useVirtualizer } from '@tanstack/react-virtual'
 import {
   Card,
   CardContent,
@@ -551,89 +550,64 @@ const recordTypeNames: { [key: string]: string } = {
 };
 
 
-function InvalidLinesList({ invalidLines }: {
-    invalidLines: LineResult[];
-}) {
-    const parentRef = React.useRef<HTMLDivElement>(null);
+function InvalidLinesList({ invalidLines }: { invalidLines: LineResult[] }) {
 
-    const rowVirtualizer = useVirtualizer({
-        count: invalidLines.length,
-        getScrollElement: () => parentRef.current,
-        estimateSize: () => 88,
-        overscan: 5,
-    });
-
-    const getHighlightedLine = (result: LineResult) => {
-      const fields = result.lineContent.split(';');
-      const errorColumns = result.errors.map(e => e.columnIndex);
-    
-      return (
-        <div className="font-mono text-xs whitespace-pre-wrap break-all">
-          {fields.map((field, index) => (
-              <span key={index} className={cn(errorColumns.includes(index) ? "bg-red-200 text-red-900 rounded-sm p-0.5" : "")}>
-                {field}{index < fields.length - 1 && <span className="text-gray-400 mx-px">;</span>}
-              </span>
-            )
-          )}
-        </div>
-      );
-    };
-
+  const getHighlightedLine = (result: LineResult) => {
+    const fields = result.lineContent.split(';');
+    const errorColumns = result.errors.map(e => e.columnIndex);
+  
     return (
-        <div ref={parentRef} className="h-96 w-full rounded-md border overflow-y-auto relative">
-            <div
-                style={{
-                    height: `${rowVirtualizer.getTotalSize()}px`,
-                    width: '100%',
-                    position: 'relative',
-                }}
-            >
-                {rowVirtualizer.getVirtualItems().map((virtualItem) => {
-                    const result = invalidLines[virtualItem.index];
-
-                    return (
-                        <div
-                            key={virtualItem.key}
-                             style={{
-                                position: 'absolute',
-                                top: 0,
-                                left: 0,
-                                width: '100%',
-                                transform: `translateY(${virtualItem.start}px)`,
-                            }}
-                            className="p-3 border-b"
-                        >
-                            <div className="flex items-start justify-between gap-4">
-                               <div className="flex-1">
-                                    <div className="flex items-center gap-2 mb-1">
-                                        <div className="font-semibold text-sm">Linha {result.lineNumber}:</div>
-                                        <Badge variant="destructive">{result.recordType || 'N/A'}</Badge>
-                                    </div>
-                                     <div className="mt-1 p-2 bg-secondary/50 rounded-md border text-xs font-mono">
-                                        {getHighlightedLine(result)}
-                                    </div>
-                               </div>
-                            </div>
-                            <div className="mt-2 pl-1">
-                                <h4 className="font-semibold text-sm mb-1 text-red-800">Erros Encontrados:</h4>
-                                <ul className="space-y-1 list-disc pl-5">
-                                    {result.errors.map((error, index) => {
-                                        const fieldRule = result.recordType ? validationRules[result.recordType]?.fields[error.columnIndex] : null;
-                                        const fieldName = fieldRule ? fieldRule.name : 'Geral';
-                                        return (
-                                            <li key={index} className="text-red-700 text-xs font-sans">
-                                                <b>{fieldName} (Campo {error.columnIndex + 1}):</b> {error.message}
-                                            </li>
-                                        )
-                                    })}
-                                </ul>
-                            </div>
-                        </div>
-                    );
-                })}
-            </div>
-        </div>
+      <div className="font-mono text-xs whitespace-pre-wrap break-all">
+        {fields.map((field, index) => (
+            <span key={index} className={cn(errorColumns.includes(index) ? "bg-red-200 text-red-900 rounded-sm p-0.5" : "")}>
+              {field}{index < fields.length - 1 && <span className="text-gray-400 mx-px">;</span>}
+            </span>
+          )
+        )}
+      </div>
     );
+  };
+
+  return (
+      <ScrollArea className="h-96 w-full rounded-md border">
+          <div className="p-4">
+              {invalidLines.map((result) => {
+                  return (
+                      <div
+                          key={result.lineNumber}
+                          className="p-3 border-b mb-2 bg-secondary/30 rounded-lg"
+                      >
+                          <div className="flex items-start justify-between gap-4">
+                             <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-1">
+                                      <div className="font-semibold text-sm">Linha {result.lineNumber}:</div>
+                                      <Badge variant="destructive">{result.recordType || 'N/A'}</Badge>
+                                  </div>
+                                   <div className="mt-1 p-2 bg-secondary/50 rounded-md border text-xs font-mono">
+                                      {getHighlightedLine(result)}
+                                  </div>
+                             </div>
+                          </div>
+                          <div className="mt-2 pl-1">
+                              <h4 className="font-semibold text-sm mb-1 text-red-800">Erros Encontrados:</h4>
+                              <ul className="space-y-1 list-disc pl-5">
+                                  {result.errors.map((error, index) => {
+                                      const fieldRule = result.recordType ? validationRules[result.recordType]?.fields[error.columnIndex] : null;
+                                      const fieldName = fieldRule ? fieldRule.name : 'Geral';
+                                      return (
+                                          <li key={index} className="text-red-700 text-xs font-sans">
+                                              <b>{fieldName} (Campo {error.columnIndex + 1}):</b> {error.message}
+                                          </li>
+                                      )
+                                  })}
+                              </ul>
+                          </div>
+                      </div>
+                  );
+              })}
+          </div>
+      </ScrollArea>
+  );
 }
 
 
