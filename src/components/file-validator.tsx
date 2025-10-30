@@ -748,7 +748,7 @@ export function FileValidator() {
                             <div key={result.lineNumber} className={cn("p-3 border-l-4 rounded-r-md mb-2", result.errors.length > 0 ? 'bg-red-50 border-red-500' : 'bg-green-50 border-green-500')}>
                                 <div className="flex items-center gap-4">
                                    {result.errors.length > 0 ? <AlertCircle className="h-5 w-5 text-red-500 shrink-0" /> : <CheckCircle className="h-5 w-5 text-green-500 shrink-0" />}
-                                    <p className="font-semibold">Linha {result.lineNumber}: <Badge variant="secondary">{result.recordType || 'N/A'}</Badge></p>
+                                    <div className="font-semibold">Linha {result.lineNumber}: <Badge variant="secondary">{result.recordType || 'N/A'}</Badge></div>
                                 </div>
                                 <p className="truncate mt-1 ml-9 text-muted-foreground">{result.lineContent}</p>
                                 {result.errors.length > 0 && (
