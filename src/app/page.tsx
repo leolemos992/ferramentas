@@ -7,7 +7,7 @@ export default function Home() {
     <main className="flex min-h-screen flex-col items-center justify-center bg-background p-4 sm:p-8 md:p-12">
       <div className="text-center mb-12">
         <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl md:text-6xl">
-          Central de Ferramentas
+          Ferramentas
         </h1>
         <p className="mt-4 max-w-2xl text-lg text-muted-foreground mx-auto">
           Selecione uma das ferramentas abaixo para começar.
