@@ -77,10 +77,12 @@ export function DictionaryManager() {
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
-        let content = e.target?.result as string;
+        const buffer = e.target?.result as ArrayBuffer;
+        const decoder = new TextDecoder('latin1');
+        const content = decoder.decode(buffer);
+
         const parser = new DOMParser();
-        // Force parser to use latin1 by adding a meta tag.
-        const doc = parser.parseFromString(`<meta charset="ISO-8859-1">` + content, "text/html");
+        const doc = parser.parseFromString(content, "text/html");
         const tableElements = doc.querySelectorAll("body > center > div > table");
 
         const parsedTables: TableData[] = Array.from(tableElements).map((table) => {
@@ -160,7 +162,7 @@ export function DictionaryManager() {
       });
     }
 
-    reader.readAsText(fileToParse, "latin1");
+    reader.readAsArrayBuffer(fileToParse);
   };
 
   const handleGlobalSearch = () => {
