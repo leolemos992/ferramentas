@@ -92,10 +92,10 @@ export function DictionaryComparison() {
 
               if (isFieldsSection && ths.length === 0 && tds.length === 4) {
                    fields.push({
-                      name: tds[0].textContent?.trim().replace(/\s/g, ' ') || '',
-                      type: tds[1].textContent?.trim().replace(/\s/g, ' ') || '',
+                      name: tds[0].textContent?.trim() || '',
+                      type: tds[1].textContent?.trim() || '',
                       size: tds[2].textContent?.trim().replace(/&nbsp;/g, '') || '',
-                      description: tds[3].textContent?.trim().replace(/\s/g, ' ') || '',
+                      description: tds[3].textContent?.trim() || '',
                   });
               } else if (isFkSection && ths.length === 0 && tds.length === 4) {
                   foreignKeys.push({
