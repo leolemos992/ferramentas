@@ -61,9 +61,9 @@ export function DictionaryComparison() {
       const reader = new FileReader();
       reader.onload = (e) => {
         try {
-          const content = e.target?.result as string;
+          let content = e.target?.result as string;
           const parser = new DOMParser();
-          const doc = parser.parseFromString(content, "text/html");
+          const doc = parser.parseFromString(`<meta charset="ISO-8859-1">` + content, "text/html");
           const tableElements = doc.querySelectorAll("body > center > div > table");
 
           const parsedTables: TableData[] = Array.from(tableElements).map((table) => {
@@ -281,3 +281,5 @@ export function DictionaryComparison() {
     </div>
   );
 }
+
+    
