@@ -78,7 +78,7 @@ export function DictionaryManager() {
     reader.onload = (e) => {
       try {
         const buffer = e.target?.result as ArrayBuffer;
-        const decoder = new TextDecoder('latin1');
+        const decoder = new TextDecoder('utf-8');
         const content = decoder.decode(buffer);
 
         const parser = new DOMParser();
@@ -361,5 +361,3 @@ export function DictionaryManager() {
     </div>
   );
 }
-
-    
