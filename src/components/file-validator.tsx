@@ -870,46 +870,84 @@ export function FileValidator() {
       });
       return;
     }
-
-    const doc = new jsPDF();
+  
+    const doc = new jsPDF({ orientation: "landscape" });
     
     doc.setFontSize(18);
     doc.text("Relatório de Validação de Arquivo", 14, 22);
     doc.setFontSize(11);
     doc.text(`Arquivo: ${file.name}`, 14, 30);
     doc.text(`Data: ${new Date().toLocaleString()}`, 14, 36);
-
-    const tableData = invalidLines.map(line => ([
-      line.lineNumber,
-      line.recordType || 'N/A',
-      line.lineContent,
-      line.errors.map(e => {
-        const fieldName = line.recordType && e.columnIndex >= 0 ? validationRules[line.recordType]?.fields[e.columnIndex]?.name : 'Geral';
-        return `${fieldName} (Campo ${e.columnIndex + 1}): ${e.message}`;
-      }).join('\n')
-    ]));
-
+  
+    const tableData = invalidLines.map(line => ({
+      line,
+      body: [
+        line.lineNumber,
+        line.recordType || 'N/A',
+        line.lineContent,
+        line.errors.map(e => {
+          const fieldName = line.recordType && e.columnIndex >= 0 ? validationRules[line.recordType]?.fields[e.columnIndex]?.name : 'Geral';
+          return `${fieldName} (Campo ${e.columnIndex + 1}): ${e.message}`;
+        }).join('\n')
+      ]
+    }));
+  
     autoTable(doc, {
       startY: 45,
       head: [['Linha', 'Tipo', 'Conteúdo da Linha', 'Erros Encontrados']],
-      body: tableData,
+      body: tableData.map(d => d.body),
       styles: {
         fontSize: 8,
+        cellPadding: 2,
       },
       headStyles: {
-        fillColor: [22, 163, 74]
+        fillColor: [34, 197, 94], // green-500
+        textColor: 255,
       },
       columnStyles: {
         0: { cellWidth: 15 },
         1: { cellWidth: 15 },
-        2: { cellWidth: 'auto' },
+        2: { cellWidth: 120 },
         3: { cellWidth: 'auto' },
-      }
+      },
+      didDrawCell: (data) => {
+        // Highlight content for 'Conteúdo da Linha' column
+        if (data.column.index === 2 && data.row.section === 'body') {
+          const lineResult = invalidLines[data.row.index];
+          const fields = lineResult.lineContent.split(';');
+          const errorColumns = lineResult.errors.map(e => e.columnIndex);
+          const cell = data.cell;
+          
+          let currentX = cell.x + cell.padding('left');
+          const currentY = cell.y + cell.padding('top');
+          
+          doc.setFontSize(data.cell.styles.fontSize || 8);
+          doc.setFont(data.cell.styles.font || 'helvetica', data.cell.styles.fontStyle || 'normal');
+  
+          fields.forEach((field, index) => {
+            const isError = errorColumns.includes(index);
+            const text = field + (index < fields.length - 1 ? ';' : '');
+            const textWidth = doc.getStringUnitWidth(text) * (doc.getFontSize() / doc.internal.scaleFactor);
+  
+            if (isError) {
+              doc.setFillColor(254, 226, 226); // red-100
+              doc.rect(currentX, cell.y, textWidth, cell.height, 'F');
+              doc.setTextColor(153, 27, 27); // red-800
+            } else {
+              doc.setTextColor(41, 37, 36); // neutral-800
+            }
+            
+            doc.text(text, currentX, currentY);
+            currentX += textWidth;
+          });
+          doc.setTextColor(0, 0, 0); // Reset text color
+        }
+      },
     });
-
+  
     const originalFileName = file.name.replace(/\.[^/.]+$/, "") || "arquivo";
     doc.save(`relatorio_erros_${originalFileName}.pdf`);
-
+  
     toast({
         title: "Relatório PDF Gerado",
         description: "O download do seu relatório de erros foi iniciado.",
@@ -1155,3 +1193,5 @@ export function FileValidator() {
     </div>
   );
 }
+
+    
