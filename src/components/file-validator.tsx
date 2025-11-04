@@ -12,7 +12,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { X, CheckCircle, AlertCircle, UploadCloud, FileCheck, Trash2, Loader2, Wrench, ChevronDown, Download } from "lucide-react";
+import { X, CheckCircle, AlertCircle, UploadCloud, FileCheck, Trash2, Loader2, Wrench, ChevronDown, Download, FileText } from "lucide-react";
 import { Label } from "./ui/label";
 import { cn } from "@/lib/utils";
 import { Badge } from "./ui/badge";
@@ -21,6 +21,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "./ui/alert-dialog";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 
 type FieldRule = {
@@ -859,6 +861,61 @@ export function FileValidator() {
     setIsConfirmingCorrection(false);
   };
 
+  const handleExportPdf = () => {
+    if (!file || invalidLines.length === 0) {
+      toast({
+        variant: "destructive",
+        title: "Nenhum erro para exportar",
+        description: "Não há linhas com erros para gerar o relatório em PDF.",
+      });
+      return;
+    }
+
+    const doc = new jsPDF();
+    
+    doc.setFontSize(18);
+    doc.text("Relatório de Validação de Arquivo", 14, 22);
+    doc.setFontSize(11);
+    doc.text(`Arquivo: ${file.name}`, 14, 30);
+    doc.text(`Data: ${new Date().toLocaleString()}`, 14, 36);
+
+    const tableData = invalidLines.map(line => ([
+      line.lineNumber,
+      line.recordType || 'N/A',
+      line.lineContent,
+      line.errors.map(e => {
+        const fieldName = line.recordType && e.columnIndex >= 0 ? validationRules[line.recordType]?.fields[e.columnIndex]?.name : 'Geral';
+        return `${fieldName} (Campo ${e.columnIndex + 1}): ${e.message}`;
+      }).join('\n')
+    ]));
+
+    autoTable(doc, {
+      startY: 45,
+      head: [['Linha', 'Tipo', 'Conteúdo da Linha', 'Erros Encontrados']],
+      body: tableData,
+      styles: {
+        fontSize: 8,
+      },
+      headStyles: {
+        fillColor: [22, 163, 74]
+      },
+      columnStyles: {
+        0: { cellWidth: 15 },
+        1: { cellWidth: 15 },
+        2: { cellWidth: 'auto' },
+        3: { cellWidth: 'auto' },
+      }
+    });
+
+    const originalFileName = file.name.replace(/\.[^/.]+$/, "") || "arquivo";
+    doc.save(`relatorio_erros_${originalFileName}.pdf`);
+
+    toast({
+        title: "Relatório PDF Gerado",
+        description: "O download do seu relatório de erros foi iniciado.",
+    });
+  }
+
 
   const { validLines, invalidLines } = useMemo(() => {
     const validLines = results.filter(r => r.lineContent.trim() !== '' && r.errors.length === 0);
@@ -969,12 +1026,22 @@ export function FileValidator() {
 
         {results.length > 0 && !loading && (
             <Card className="animate-in fade-in-50 duration-500">
-                <CardHeader className="flex flex-row items-center justify-between">
-                    <div>
-                        <CardTitle>Resultado da Validação</CardTitle>
-                        <CardDescription>Arquivo: {file?.name}</CardDescription>
+                <CardHeader>
+                    <div className="flex flex-wrap items-center justify-between gap-4">
+                        <div>
+                            <CardTitle>Resultado da Validação</CardTitle>
+                            <CardDescription>Arquivo: {file?.name}</CardDescription>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <Button variant="outline" onClick={handleExportPdf} disabled={invalidLines.length === 0}>
+                                <FileText className="mr-2"/>
+                                Exportar PDF
+                            </Button>
+                            <Button variant="outline" onClick={handleRemoveFile}>
+                                <Trash2 className="mr-2"/> Limpar Resultados
+                            </Button>
+                        </div>
                     </div>
-                    <Button variant="outline" onClick={handleRemoveFile}><Trash2 className="mr-2"/> Limpar Resultados</Button>
                 </CardHeader>
                 <CardContent>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
