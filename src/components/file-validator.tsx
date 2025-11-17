@@ -979,13 +979,17 @@ export function FileValidator() {
     <div className="w-full max-w-7xl mx-auto space-y-6">
         <Card className="w-full shadow-lg">
             <CardHeader>
-                <CardTitle className="text-2xl font-bold tracking-tight">
-                Validador R2D2
-                </CardTitle>
-                <CardDescription>
-                Faça o upload de um arquivo de importação (.txt ou .csv) para validar
-                sua estrutura.
-                </CardDescription>
+                <div className="flex justify-between items-start">
+                    <div>
+                        <CardTitle className="text-2xl font-bold tracking-tight">
+                        Validador R2D2
+                        </CardTitle>
+                        <CardDescription>
+                        Faça o upload de um arquivo de importação (.txt ou .csv) para validar
+                        sua estrutura.
+                        </CardDescription>
+                    </div>
+                </div>
             </CardHeader>
             <CardContent>
                 <div className="space-y-4">
