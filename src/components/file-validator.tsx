@@ -740,7 +740,10 @@ export function FileValidator() {
 
     const reader = new FileReader();
     reader.onload = (e) => {
-      const content = e.target?.result as string;
+      const buffer = e.target?.result as ArrayBuffer;
+      const decoder = new TextDecoder('utf-8');
+      const content = decoder.decode(buffer);
+
       setFileContent(content);
       const lines = content.split(/\r?\n/);
       const validationResults = lines.map((line, index) => validateLine(line, index + 1));
@@ -764,7 +767,7 @@ export function FileValidator() {
             description: "Houve um erro ao tentar ler o arquivo.",
         });
     }
-    reader.readAsText(file, "utf-8");
+    reader.readAsArrayBuffer(file);
   };
   
   const correctLine = (lineResult: LineResult): string => {
@@ -1174,19 +1177,17 @@ export function FileValidator() {
         <AlertDialog open={isConfirmingCorrection} onOpenChange={setIsConfirmingCorrection}>
             <AlertDialogContent>
                 <AlertDialogHeader>
-                <AlertDialogTitle>Confirmar Correção e Download</AlertDialogTitle>
-                <AlertDialogDescription>
-                    <div>{`Você está prestes a corrigir um arquivo com ${invalidLines.length} linha(s) com erro. A ferramenta tentará aplicar as seguintes correções:`}</div>
-                </AlertDialogDescription>
-                <ul className="list-disc pl-5 text-sm text-muted-foreground">
-                    <li>Ajustará o número de campos (colunas) para o esperado.</li>
-                    <li>Removerá caracteres excedentes em campos com tamanho máximo.</li>
-                    <li>Corrigirá a formatação de campos numéricos (casas decimais).</li>
-                    <li>Preencherá campos obrigatórios vazios com valores padrão.</li>
-                </ul>
-                <div className="text-sm text-muted-foreground">
-                    Um novo arquivo chamado <code className="bg-muted px-1 py-0.5 rounded text-foreground">{`${file?.name.replace(/\.[^/.]+$/, "") || "arquivo"}_corrigido.txt`}</code> será baixado. Deseja continuar?
-                </div>
+                    <AlertDialogTitle>Confirmar Correção e Download</AlertDialogTitle>
+                    <div className="text-sm text-muted-foreground">
+                        <p>{`Você está prestes a corrigir um arquivo com ${invalidLines.length} linha(s) com erro. A ferramenta tentará aplicar as seguintes correções:`}</p>
+                        <ul className="list-disc pl-5 mt-2">
+                            <li>Ajustará o número de campos (colunas) para o esperado.</li>
+                            <li>Removerá caracteres excedentes em campos com tamanho máximo.</li>
+                            <li>Corrigirá a formatação de campos numéricos (casas decimais).</li>
+                            <li>Preencherá campos obrigatórios vazios com valores padrão.</li>
+                        </ul>
+                        <p className="mt-2">Um novo arquivo chamado <code className="bg-muted px-1 py-0.5 rounded text-foreground">{`${file?.name.replace(/\.[^/.]+$/, "") || "arquivo"}_corrigido.txt`}</code> será baixado. Deseja continuar?</p>
+                    </div>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                 <AlertDialogCancel>Cancelar</AlertDialogCancel>
@@ -1202,4 +1203,6 @@ export function FileValidator() {
 }
 
     
+    
+
     
