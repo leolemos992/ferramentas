@@ -914,6 +914,7 @@ export function FileValidator() {
         // Highlight content for 'Conteúdo da Linha' column
         if (data.column.index === 2 && data.row.section === 'body') {
           const lineResult = invalidLines[data.row.index];
+          if (!lineResult) return;
           const fields = lineResult.lineContent.split(';');
           const errorColumns = lineResult.errors.map(e => e.columnIndex);
           const cell = data.cell;
