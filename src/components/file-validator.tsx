@@ -1174,19 +1174,19 @@ export function FileValidator() {
          <AlertDialog open={isConfirmingCorrection} onOpenChange={setIsConfirmingCorrection}>
             <AlertDialogContent>
                 <AlertDialogHeader>
-                <AlertDialogTitle>Confirmar Correção e Download</AlertDialogTitle>
-                <AlertDialogDescription>
-                    <div>
+                    <AlertDialogTitle>Confirmar Correção e Download</AlertDialogTitle>
+                    <AlertDialogDescription>
                         {`Você está prestes a corrigir um arquivo com ${invalidLines.length} linha(s) com erro. A ferramenta tentará aplicar as seguintes correções:`}
-                        <ul className="list-disc pl-5 mt-2 text-sm text-muted-foreground">
-                            <li>Ajustará o número de campos (colunas) para o esperado.</li>
-                            <li>Removerá caracteres excedentes em campos com tamanho máximo.</li>
-                            <li>Corrigirá a formatação de campos numéricos (casas decimais).</li>
-                            <li>Preencherá campos obrigatórios vazios com valores padrão.</li>
-                        </ul>
-                        <p className="mt-2">Um novo arquivo chamado <code className="bg-muted px-1 py-0.5 rounded text-foreground">{`${file?.name.replace(/\.[^/.]+$/, "") || "arquivo"}_corrigido.txt`}</code> será baixado. Deseja continuar?</p>
-                    </div>
-                </AlertDialogDescription>
+                    </AlertDialogDescription>
+                    <ul className="list-disc pl-5 text-sm text-muted-foreground">
+                        <li>Ajustará o número de campos (colunas) para o esperado.</li>
+                        <li>Removerá caracteres excedentes em campos com tamanho máximo.</li>
+                        <li>Corrigirá a formatação de campos numéricos (casas decimais).</li>
+                        <li>Preencherá campos obrigatórios vazios com valores padrão.</li>
+                    </ul>
+                    <p className="text-sm text-muted-foreground">
+                        Um novo arquivo chamado <code className="bg-muted px-1 py-0.5 rounded text-foreground">{`${file?.name.replace(/\.[^/.]+$/, "") || "arquivo"}_corrigido.txt`}</code> será baixado. Deseja continuar?
+                    </p>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                 <AlertDialogCancel>Cancelar</AlertDialogCancel>
