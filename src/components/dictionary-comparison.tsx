@@ -12,12 +12,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { UploadCloud, Loader2, GitCompareArrows, AlertTriangle, Plus, Minus, Pencil, CheckCircle } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { UploadCloud, Loader2, GitCompareArrows, CheckCircle, Plus, Minus, FileDiff, ArrowRight, CaseSensitive } from "lucide-react";
 import { Label } from "./ui/label";
 import { TableData } from "./dictionary-viewer";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "./ui/accordion";
 import { Badge } from "./ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
+
 
 type ComparisonResult = {
   addedTables: TableData[];
@@ -194,6 +195,46 @@ export function DictionaryComparison() {
   }, [comparisonResult]);
 
 
+  const renderModifiedColumnDetail = (oldCol: TableData['fields'][0], newCol: TableData['fields'][0]) => {
+    const changes: React.ReactNode[] = [];
+    if (oldCol.type !== newCol.type) {
+      changes.push(
+        <div className="flex items-center gap-2">
+          <CaseSensitive className="h-4 w-4 text-muted-foreground" />
+          <span className="font-semibold">Tipo:</span>
+          <Badge variant="outline">{oldCol.type}</Badge>
+          <ArrowRight className="h-4 w-4" />
+          <Badge variant="secondary">{newCol.type}</Badge>
+        </div>
+      );
+    }
+    if (oldCol.size !== newCol.size) {
+      changes.push(
+        <div className="flex items-center gap-2">
+          <CaseSensitive className="h-4 w-4 text-muted-foreground" />
+          <span className="font-semibold">Tamanho:</span>
+          <Badge variant="outline">{oldCol.size || 'N/A'}</Badge>
+          <ArrowRight className="h-4 w-4" />
+          <Badge variant="secondary">{newCol.size || 'N/A'}</Badge>
+        </div>
+      );
+    }
+    if (oldCol.description !== newCol.description) {
+        changes.push(
+          <div className="flex items-start gap-2">
+            <CaseSensitive className="h-4 w-4 text-muted-foreground mt-1" />
+            <div className="flex flex-col">
+              <span className="font-semibold">Descrição:</span>
+              <p className="text-xs text-red-600 line-through">DE: {oldCol.description}</p>
+              <p className="text-xs text-green-600">PARA: {newCol.description}</p>
+            </div>
+          </div>
+        );
+      }
+    return <div className="space-y-1">{changes}</div>;
+  };
+
+
   return (
     <div className="w-full">
       <Card>
@@ -206,12 +247,12 @@ export function DictionaryComparison() {
         <CardContent className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <Label htmlFor="file-a">Dicionário Antigo</Label>
+              <Label htmlFor="file-a">Dicionário Antigo (Versão A)</Label>
               <Input id="file-a" type="file" onChange={handleFileChange('A')} accept=".html" />
               {fileA && <p className="text-sm text-muted-foreground">{fileA.name}</p>}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="file-b">Dicionário Novo</Label>
+              <Label htmlFor="file-b">Dicionário Novo (Versão B)</Label>
               <Input id="file-b" type="file" onChange={handleFileChange('B')} accept=".html" />
               {fileB && <p className="text-sm text-muted-foreground">{fileB.name}</p>}
             </div>
@@ -227,49 +268,83 @@ export function DictionaryComparison() {
         <Card className="mt-8">
           <CardHeader>
             <CardTitle>Resultados da Comparação</CardTitle>
+            <CardDescription>Resumo das alterações entre a Versão A e a Versão B.</CardDescription>
           </CardHeader>
           <CardContent>
              {!hasChanges ? (
-                <div className="flex flex-col items-center justify-center p-8 text-center bg-secondary/50 rounded-lg">
+                <div className="flex flex-col items-center justify-center p-8 text-center bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
                     <CheckCircle className="w-12 h-12 text-green-500 mb-4" />
-                    <h3 className="text-lg font-semibold">Nenhuma alteração encontrada</h3>
+                    <h3 className="text-lg font-semibold text-green-800 dark:text-green-300">Nenhuma alteração encontrada</h3>
                     <p className="text-muted-foreground">Os dois dicionários de dados são idênticos.</p>
                 </div>
             ) : (
-                <Accordion type="multiple" className="w-full">
+                <Accordion type="multiple" defaultValue={["added-tables", "removed-tables", "modified-tables"]} className="w-full">
                 {comparisonResult.addedTables.length > 0 && (
                     <AccordionItem value="added-tables">
-                    <AccordionTrigger><div className="flex items-center gap-2"><Plus className="text-green-500"/> Tabelas Adicionadas ({comparisonResult.addedTables.length})</div></AccordionTrigger>
+                    <AccordionTrigger><div className="flex items-center gap-2 font-semibold"><Plus className="text-green-500"/> Tabelas Adicionadas ({comparisonResult.addedTables.length})</div></AccordionTrigger>
                     <AccordionContent>
-                        <ul className="list-disc pl-5 space-y-1">
-                        {comparisonResult.addedTables.map(t => <li key={t.name}>{t.name}</li>)}
-                        </ul>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 text-sm">
+                            {comparisonResult.addedTables.map(t => <Badge key={t.name} variant="outline" className="text-green-700 border-green-200 bg-green-50 dark:text-green-300 dark:border-green-700 dark:bg-green-900/30">{t.name}</Badge>)}
+                        </div>
                     </AccordionContent>
                     </AccordionItem>
                 )}
                 {comparisonResult.removedTables.length > 0 && (
                     <AccordionItem value="removed-tables">
-                    <AccordionTrigger><div className="flex items-center gap-2"><Minus className="text-red-500"/> Tabelas Removidas ({comparisonResult.removedTables.length})</div></AccordionTrigger>
+                    <AccordionTrigger><div className="flex items-center gap-2 font-semibold"><Minus className="text-red-500"/> Tabelas Removidas ({comparisonResult.removedTables.length})</div></AccordionTrigger>
                     <AccordionContent>
-                        <ul className="list-disc pl-5 space-y-1">
-                        {comparisonResult.removedTables.map(t => <li key={t.name}>{t.name}</li>)}
-                        </ul>
+                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 text-sm">
+                            {comparisonResult.removedTables.map(t => <Badge key={t.name} variant="outline" className="text-red-700 border-red-200 bg-red-50 dark:text-red-300 dark:border-red-700 dark:bg-red-900/30">{t.name}</Badge>)}
+                        </div>
                     </AccordionContent>
                     </AccordionItem>
                 )}
                 {comparisonResult.modifiedTables.length > 0 && (
                      <AccordionItem value="modified-tables">
-                        <AccordionTrigger><div className="flex items-center gap-2"><Pencil className="text-blue-500"/> Tabelas Modificadas ({comparisonResult.modifiedTables.length})</div></AccordionTrigger>
+                        <AccordionTrigger><div className="flex items-center gap-2 font-semibold"><FileDiff className="text-blue-500"/> Tabelas Modificadas ({comparisonResult.modifiedTables.length})</div></AccordionTrigger>
                         <AccordionContent className="space-y-4">
                             {comparisonResult.modifiedTables.map(t => (
-                               <Card key={t.name}>
-                                    <CardHeader className="p-4">
-                                        <CardTitle className="text-lg">{t.name}</CardTitle>
+                               <Card key={t.name} className="bg-secondary/30">
+                                    <CardHeader className="p-4 bg-secondary/50 rounded-t-lg">
+                                        <CardTitle className="text-lg font-mono">{t.name}</CardTitle>
                                     </CardHeader>
-                                    <CardContent className="p-4 pt-0 space-y-2">
-                                        {t.addedColumns.length > 0 && <div><h4 className="font-semibold flex items-center gap-2"><Plus size={16} className="text-green-500"/>Colunas Adicionadas:</h4><ul className="list-disc pl-10 text-sm">{t.addedColumns.map(c => <li key={c.name}>{c.name} ({c.type})</li>)}</ul></div>}
-                                        {t.removedColumns.length > 0 && <div><h4 className="font-semibold flex items-center gap-2"><Minus size={16} className="text-red-500"/>Colunas Removidas:</h4><ul className="list-disc pl-10 text-sm">{t.removedColumns.map(c => <li key={c.name}>{c.name}</li>)}</ul></div>}
-                                        {t.modifiedColumns.length > 0 && <div><h4 className="font-semibold flex items-center gap-2"><Pencil size={16} className="text-blue-500"/>Colunas Modificadas:</h4><ul className="list-disc pl-10 text-sm">{t.modifiedColumns.map(c => <li key={c.new.name}><b>{c.new.name}</b>: <Badge variant="secondary">{c.old.type} &rarr; {c.new.type}</Badge></li>)}</ul></div>}
+                                    <CardContent className="p-0">
+                                      <Table>
+                                        <TableHeader>
+                                          <TableRow>
+                                            <TableHead className="w-10"></TableHead>
+                                            <TableHead>Coluna</TableHead>
+                                            <TableHead>Detalhes da Alteração</TableHead>
+                                          </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {t.addedColumns.map(c => (
+                                                <TableRow key={`add-${c.name}`} className="bg-green-50 dark:bg-green-900/20 hover:bg-green-100 dark:hover:bg-green-900/30">
+                                                    <TableCell><Plus className="h-4 w-4 text-green-600"/></TableCell>
+                                                    <TableCell className="font-mono text-xs">{c.name}</TableCell>
+                                                    <TableCell className="text-xs">
+                                                        Tipo: <Badge variant="secondary">{c.type}</Badge>, Tamanho: <Badge variant="secondary">{c.size || 'N/A'}</Badge>
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))}
+                                            {t.removedColumns.map(c => (
+                                                 <TableRow key={`rem-${c.name}`} className="bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30">
+                                                    <TableCell><Minus className="h-4 w-4 text-red-600"/></TableCell>
+                                                    <TableCell className="font-mono text-xs">{c.name}</TableCell>
+                                                    <TableCell className="text-xs text-red-700 dark:text-red-300">Coluna removida</TableCell>
+                                                </TableRow>
+                                            ))}
+                                            {t.modifiedColumns.map(c => (
+                                                 <TableRow key={`mod-${c.new.name}`} className="bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30">
+                                                    <TableCell><FileDiff className="h-4 w-4 text-blue-600"/></TableCell>
+                                                    <TableCell className="font-mono text-xs">{c.new.name}</TableCell>
+                                                    <TableCell className="text-xs">
+                                                      {renderModifiedColumnDetail(c.old, c.new)}
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                      </Table>
                                     </CardContent>
                                </Card>
                             ))}
@@ -284,3 +359,5 @@ export function DictionaryComparison() {
     </div>
   );
 }
+
+    
