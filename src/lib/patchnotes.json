@@ -1,6 +1,17 @@
 {
     "notes": [
         {
+            "version": "0.0.0.6",
+            "date": "2024-08-05",
+            "changes": [
+                "Aprimorado o Validador R2D2: Adicionado botão de Ajuda com instruções detalhadas.",
+                "Implementada a opção de alternar entre 'Visão por Linhas' e 'Agrupar Erros' para facilitar a análise.",
+                "Melhoradas as mensagens de erro, incluindo sugestões de correção.",
+                "Corrigida a geração de relatório em PDF, garantindo formatação legível.",
+                "Resolvido bug que impedia o funcionamento do botão 'Carregar Novo Arquivo'."
+            ]
+        },
+        {
             "version": "0.0.0.5",
             "date": "2024-08-02",
             "changes": [
