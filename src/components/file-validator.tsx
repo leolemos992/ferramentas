@@ -12,7 +12,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { X, CheckCircle, AlertCircle, UploadCloud, FileCheck, Trash2, Loader2, Wrench, Download, FileText, Edit, Save, List, Group } from "lucide-react";
+import { X, CheckCircle, AlertCircle, UploadCloud, FileCheck, Trash2, Loader2, Wrench, Download, FileText, Edit, Save, List, Group, HelpCircle } from "lucide-react";
 import { Label } from "./ui/label";
 import { cn } from "@/lib/utils";
 import { Badge } from "./ui/badge";
@@ -22,6 +22,7 @@ import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescript
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "./ui/accordion";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose, DialogDescription } from "./ui/dialog";
 
 
 type FieldRule = {
@@ -1117,6 +1118,60 @@ export function FileValidator() {
                         </CardTitle>
                         <Badge variant="outline">BETA</Badge>
                     </div>
+                    <Dialog>
+                        <DialogTrigger asChild>
+                            <Button variant="outline" size="icon">
+                                <HelpCircle className="h-4 w-4" />
+                                <span className="sr-only">Ajuda</span>
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-2xl">
+                            <DialogHeader>
+                                <DialogTitle>Como Usar o Validador R2D2</DialogTitle>
+                                <DialogDescription>
+                                    Um guia rápido para aproveitar ao máximo a ferramenta.
+                                </DialogDescription>
+                            </DialogHeader>
+                            <ScrollArea className="max-h-[70vh] pr-6">
+                            <div className="space-y-4 text-sm">
+                                <section>
+                                    <h3 className="font-semibold text-base mb-2">1. Carregando um Arquivo</h3>
+                                    <p>Para começar, carregue um arquivo de importação no formato <strong>.txt</strong> ou <strong>.csv</strong>. Você pode clicar na área designada para abrir o seletor de arquivos ou simplesmente arrastar e soltar o arquivo na tela.</p>
+                                </section>
+                                <section>
+                                    <h3 className="font-semibold text-base mb-2">2. Analisando os Resultados</h3>
+                                    <p>Após a validação, a ferramenta exibirá os resultados em abas:</p>
+                                    <ul className="list-disc pl-5 mt-2 space-y-1">
+                                        <li><strong>Linhas com Erro:</strong> Lista todas as linhas que não seguem o layout R2D2. Os campos problemáticos são destacados em vermelho.</li>
+                                        <li><strong>Linhas Válidas:</strong> Mostra todas as linhas que foram validadas com sucesso.</li>
+                                        <li><strong>Arquivo Original:</strong> Exibe o conteúdo completo do arquivo que você enviou.</li>
+                                    </ul>
+                                </section>
+                                <section>
+                                    <h3 className="font-semibold text-base mb-2">3. Corrigindo Erros</h3>
+                                    <p>Na aba de erros, você tem duas formas de visualizar e corrigir:</p>
+                                    <ul className="list-disc pl-5 mt-2 space-y-1">
+                                        <li><strong>Visão por Linhas:</strong> Mostra cada linha com erro individualmente.</li>
+                                        <li><strong>Agrupar Erros:</strong> Agrupa os erros por tipo (ex: "Campo obrigatório não preenchido"), facilitando a identificação de problemas recorrentes. Expanda um grupo para ver todas as linhas afetadas.</li>
+                                        <li><strong>Edição Manual:</strong> Clique no ícone de <Edit className="inline h-4 w-4" /> para tornar uma linha editável. Corrija o conteúdo e clique em "Salvar". O destaque no campo com erro ajuda a identificar o que precisa ser ajustado.</li>
+                                    </ul>
+                                </section>
+                                <section>
+                                    <h3 className="font-semibold text-base mb-2">4. Baixando o Arquivo Corrigido</h3>
+                                    <p>Após fazer as edições manuais, clique no botão <strong>"Corrigir e Baixar"</strong>. Você terá duas opções:</p>
+                                     <ul className="list-disc pl-5 mt-2 space-y-1">
+                                        <li><strong>Baixar com Correções Manuais:</strong> Gera um novo arquivo contendo apenas as alterações que você fez manualmente.</li>
+                                        <li><strong>Usar Correção Automática:</strong> A ferramenta tentará corrigir os erros restantes automaticamente. <strong>Atenção:</strong> Use esta opção com cuidado, pois a correção automática pode não ser perfeita para todos os casos.</li>
+                                    </ul>
+                                </section>
+                                 <section>
+                                    <h3 className="font-semibold text-base mb-2">5. Exportando Relatório de Erros</h3>
+                                    <p>Se preferir, você pode exportar um relatório em PDF de todas as linhas com erro clicando em <strong>"Exportar PDF"</strong>. Isso é útil para compartilhar o status do arquivo com outras pessoas.</p>
+                                </section>
+                            </div>
+                            </ScrollArea>
+                        </DialogContent>
+                    </Dialog>
                 </div>
                 <CardDescription>
                 Faça o upload de um arquivo de importação (.txt ou .csv) para validar
@@ -1192,6 +1247,60 @@ export function FileValidator() {
                             <CardDescription>Arquivo: {file?.name}</CardDescription>
                         </div>
                         <div className="flex items-center gap-2">
+                           <Dialog>
+                                <DialogTrigger asChild>
+                                    <Button variant="outline" size="icon">
+                                        <HelpCircle className="h-4 w-4" />
+                                        <span className="sr-only">Ajuda</span>
+                                    </Button>
+                                </DialogTrigger>
+                                <DialogContent className="sm:max-w-2xl">
+                                    <DialogHeader>
+                                        <DialogTitle>Como Usar o Validador R2D2</DialogTitle>
+                                        <DialogDescription>
+                                            Um guia rápido para aproveitar ao máximo a ferramenta.
+                                        </DialogDescription>
+                                    </DialogHeader>
+                                    <ScrollArea className="max-h-[70vh] pr-6">
+                                    <div className="space-y-4 text-sm">
+                                        <section>
+                                            <h3 className="font-semibold text-base mb-2">1. Carregando um Arquivo</h3>
+                                            <p>Para começar, carregue um arquivo de importação no formato <strong>.txt</strong> ou <strong>.csv</strong>. Você pode clicar na área designada para abrir o seletor de arquivos ou simplesmente arrastar e soltar o arquivo na tela.</p>
+                                        </section>
+                                        <section>
+                                            <h3 className="font-semibold text-base mb-2">2. Analisando os Resultados</h3>
+                                            <p>Após a validação, a ferramenta exibirá os resultados em abas:</p>
+                                            <ul className="list-disc pl-5 mt-2 space-y-1">
+                                                <li><strong>Linhas com Erro:</strong> Lista todas as linhas que não seguem o layout R2D2. Os campos problemáticos são destacados em vermelho.</li>
+                                                <li><strong>Linhas Válidas:</strong> Mostra todas as linhas que foram validadas com sucesso.</li>
+                                                <li><strong>Arquivo Original:</strong> Exibe o conteúdo completo do arquivo que você enviou.</li>
+                                            </ul>
+                                        </section>
+                                        <section>
+                                            <h3 className="font-semibold text-base mb-2">3. Corrigindo Erros</h3>
+                                            <p>Na aba de erros, você tem duas formas de visualizar e corrigir:</p>
+                                            <ul className="list-disc pl-5 mt-2 space-y-1">
+                                                <li><strong>Visão por Linhas:</strong> Mostra cada linha com erro individualmente.</li>
+                                                <li><strong>Agrupar Erros:</strong> Agrupa os erros por tipo (ex: "Campo obrigatório não preenchido"), facilitando a identificação de problemas recorrentes. Expanda um grupo para ver todas as linhas afetadas.</li>
+                                                <li><strong>Edição Manual:</strong> Clique no ícone de <Edit className="inline h-4 w-4" /> para tornar uma linha editável. Corrija o conteúdo e clique em "Salvar". O destaque no campo com erro ajuda a identificar o que precisa ser ajustado.</li>
+                                            </ul>
+                                        </section>
+                                        <section>
+                                            <h3 className="font-semibold text-base mb-2">4. Baixando o Arquivo Corrigido</h3>
+                                            <p>Após fazer as edições manuais, clique no botão <strong>"Corrigir e Baixar"</strong>. Você terá duas opções:</p>
+                                             <ul className="list-disc pl-5 mt-2 space-y-1">
+                                                <li><strong>Baixar com Correções Manuais:</strong> Gera um novo arquivo contendo apenas as alterações que você fez manualmente.</li>
+                                                <li><strong>Usar Correção Automática:</strong> A ferramenta tentará corrigir os erros restantes automaticamente. <strong>Atenção:</strong> Use esta opção com cuidado, pois a correção automática pode não ser perfeita para todos os casos.</li>
+                                            </ul>
+                                        </section>
+                                         <section>
+                                            <h3 className="font-semibold text-base mb-2">5. Exportando Relatório de Erros</h3>
+                                            <p>Se preferir, você pode exportar um relatório em PDF de todas as linhas com erro clicando em <strong>"Exportar PDF"</strong>. Isso é útil para compartilhar o status do arquivo com outras pessoas.</p>
+                                        </section>
+                                    </div>
+                                    </ScrollArea>
+                                </DialogContent>
+                            </Dialog>
                            <Button variant="outline" onClick={handleUploadClick}>
                                 <UploadCloud className="mr-2"/>
                                 Carregar Novo Arquivo
@@ -1355,5 +1464,3 @@ export function FileValidator() {
     </div>
   );
 }
-
-    
