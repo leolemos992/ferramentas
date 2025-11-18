@@ -12,13 +12,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { X, CheckCircle, AlertCircle, UploadCloud, FileCheck, Trash2, Loader2, Wrench, ChevronDown, Download, FileText, Group, Edit, Save } from "lucide-react";
+import { X, CheckCircle, AlertCircle, UploadCloud, FileCheck, Trash2, Loader2, Wrench, Download, FileText, Edit, Save } from "lucide-react";
 import { Label } from "./ui/label";
 import { cn } from "@/lib/utils";
 import { Badge } from "./ui/badge";
 import { ScrollArea } from "./ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "./ui/alert-dialog";
+import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "./ui/alert-dialog";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "./ui/accordion";
@@ -553,7 +553,6 @@ const recordTypeNames: { [key: string]: string } = {
 function InvalidLineItem({ result, onUpdateLine }: { result: LineResult; onUpdateLine: (lineNumber: number, newContent: string) => void; }) {
   const [isEditing, setIsEditing] = useState(false);
   const editorRef = useRef<HTMLDivElement>(null);
-  const [editedContent, setEditedContent] = useState(result.currentLineContent);
 
   const handleSave = () => {
     if (editorRef.current) {
@@ -571,11 +570,6 @@ function InvalidLineItem({ result, onUpdateLine }: { result: LineResult; onUpdat
         ref={editorRef}
         contentEditable={isEditing}
         suppressContentEditableWarning={true}
-        onBlur={(e) => {
-          if (isEditing) {
-            setEditedContent(e.currentTarget.innerText);
-          }
-        }}
         className={cn(
             "font-mono text-xs whitespace-pre-wrap break-all p-2 rounded-md border",
             isEditing 
@@ -692,6 +686,7 @@ export function FileValidator() {
     if (isTxt || isCsv) {
       setFile(selectedFile);
       setResults([]);
+      handleValidate(selectedFile);
     } else {
       toast({
         variant: "destructive",
@@ -708,6 +703,10 @@ export function FileValidator() {
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     handleFileDrop(event.target.files?.[0]);
   };
+  
+  const handleUploadClick = () => {
+    fileInputRef.current?.click();
+  }
 
   const handleDragOver = (event: React.DragEvent<HTMLLabelElement>) => {
     event.preventDefault();
@@ -788,8 +787,8 @@ export function FileValidator() {
     return { lineNumber, originalLineContent: line, currentLineContent: line, recordType, errors: lineErrors };
   };
 
-  const handleValidate = () => {
-    if (!file) return;
+  const handleValidate = (fileToValidate: File) => {
+    if (!fileToValidate) return;
     setLoading(true);
     setResults([]);
 
@@ -821,7 +820,7 @@ export function FileValidator() {
             description: "Houve um erro ao tentar ler o arquivo.",
         });
     }
-    reader.readAsArrayBuffer(file);
+    reader.readAsArrayBuffer(fileToValidate);
   };
   
   const handleManualLineUpdate = (lineNumber: number, newContent: string) => {
@@ -1053,10 +1052,12 @@ export function FileValidator() {
         invalidLines: invalidLines.length,
         recordTypes: recordTypeNamesFound || 'Nenhum'
     };
-  }, [results, validLines, invalidLines]);
+  }, [results, validLines.length, invalidLines.length]);
 
-  return (
-    <div className="w-full max-w-7xl mx-auto space-y-6">
+
+  if (!file && !loading) {
+    return (
+      <div className="w-full max-w-7xl mx-auto">
         <Card className="w-full shadow-lg">
             <CardHeader>
                 <div className="flex justify-between items-start">
@@ -1073,14 +1074,13 @@ export function FileValidator() {
                 </CardDescription>
             </CardHeader>
             <CardContent>
-                <div className="space-y-4">
                 <Label
                     htmlFor="file-upload"
                     onDragOver={handleDragOver}
                     onDragLeave={handleDragLeave}
                     onDrop={handleDrop}
                     className={cn(
-                        "flex flex-col items-center justify-center w-full h-40 border-2 border-dashed rounded-lg cursor-pointer bg-card hover:bg-secondary/50 transition-colors",
+                        "flex flex-col items-center justify-center w-full h-64 border-2 border-dashed rounded-lg cursor-pointer bg-card hover:bg-secondary/50 transition-colors",
                         { "pointer-events-none opacity-50": loading },
                         { "bg-secondary/80 border-primary": isDragging }
                     )}
@@ -1107,48 +1107,24 @@ export function FileValidator() {
                     className="sr-only"
                     disabled={loading}
                 />
-
-                {file && !loading && (
-                    <div className="flex items-center justify-between p-3 bg-secondary rounded-md animate-in fade-in-50">
-                    <div className="text-sm font-medium text-secondary-foreground truncate">
-                        {file.name}
-                    </div>
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={handleRemoveFile}
-                        aria-label="Remover arquivo"
-                        className="h-8 w-8"
-                    >
-                        <X className="h-4 w-4" />
-                    </Button>
-                    </div>
-                )}
-                </div>
-
-                <div className="flex flex-col sm:flex-row gap-2 mt-6">
-                    <Button
-                        onClick={handleValidate}
-                        disabled={!file || loading}
-                        className="w-full text-lg py-6"
-                    >
-                    {loading ? <Loader2 className="animate-spin" /> : <FileCheck />}
-                    Validar Arquivo
-                    </Button>
-                     <Button
-                        onClick={handleConfirmCorrection}
-                        disabled={results.length === 0 || loading}
-                        className="w-full text-lg py-6"
-                        variant="outline"
-                    >
-                        <Wrench className="mr-2"/>
-                        Corrigir e Baixar
-                    </Button>
-                </div>
             </CardContent>
         </Card>
+      </div>
+    );
+  }
 
-        {results.length > 0 && !loading && (
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-96">
+          <Loader2 className="w-12 h-12 mb-4 text-primary animate-spin" />
+          <p className="text-lg text-muted-foreground">Validando arquivo...</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="w-full max-w-7xl mx-auto space-y-6">
+        {results.length > 0 && (
             <Card className="animate-in fade-in-50 duration-500">
                 <CardHeader>
                     <div className="flex flex-wrap items-center justify-between gap-4">
@@ -1157,12 +1133,21 @@ export function FileValidator() {
                             <CardDescription>Arquivo: {file?.name}</CardDescription>
                         </div>
                         <div className="flex items-center gap-2">
+                           <Button variant="outline" onClick={handleUploadClick}>
+                                <UploadCloud className="mr-2"/>
+                                Carregar Novo Arquivo
+                            </Button>
                             <Button variant="outline" onClick={handleExportPdf} disabled={invalidLines.length === 0}>
                                 <FileText className="mr-2"/>
                                 Exportar PDF
                             </Button>
-                            <Button variant="outline" onClick={handleRemoveFile}>
-                                <Trash2 className="mr-2"/> Limpar Resultados
+                            <Button
+                              onClick={handleConfirmCorrection}
+                              disabled={results.length === 0 || loading}
+                              variant="default"
+                            >
+                                <Wrench className="mr-2"/>
+                                Corrigir e Baixar
                             </Button>
                         </div>
                     </div>
@@ -1281,4 +1266,3 @@ export function FileValidator() {
     </div>
   );
 }
-
