@@ -1,6 +1,16 @@
 {
     "notes": [
         {
+            "version": "0.0.0.5",
+            "date": "2024-08-02",
+            "changes": [
+                "Aprimorada a lógica da senha técnica para ser calculada manualmente, removendo a necessidade de um arquivo gerador.",
+                "Implementado um timer de 15 minutos que expira a sessão de autenticação, aumentando a segurança.",
+                "Adicionada mensagem de erro específica para senha incorreta.",
+                "Adicionado e posicionado um botão de 'Voltar' na página de autenticação para melhor navegabilidade."
+            ]
+        },
+        {
             "version": "0.0.0.4",
             "date": "2024-08-02",
             "changes": [

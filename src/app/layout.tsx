@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
-  const version = "0.0.0.4"; 
+  const version = "0.0.0.5"; 
 
   return (
     <footer className="w-full bg-background border-t border-border mt-auto">
