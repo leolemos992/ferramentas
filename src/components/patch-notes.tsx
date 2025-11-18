@@ -20,7 +20,7 @@ export function PatchNotes() {
       <SheetTrigger asChild>
         <Button variant="link" className="p-0 h-auto text-muted-foreground">
           <BookText className="mr-2 h-4 w-4" />
-          Patch Notes
+          Notas de Versão
         </Button>
       </SheetTrigger>
       <SheetContent>
