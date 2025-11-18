@@ -582,7 +582,7 @@ function InvalidLineItem({ result, onUpdateLine }: { result: LineResult; onUpdat
       >
         {fields.map((field, index) => {
           let isError = errorColumns.includes(index);
-          if (!isError && isFieldCountError && expectedFieldCount && index >= expectedFieldCount) {
+          if (!isError && isFieldCountError && expectedFieldCount && index >= expectedFieldCount - 1) {
             isError = true;
           }
           return (
@@ -1258,19 +1258,27 @@ export function FileValidator() {
                 <AlertDialogHeader>
                     <AlertDialogTitle>Corrigir e Baixar Arquivo</AlertDialogTitle>
                     <AlertDialogDescription>
-                        Escolha como você deseja gerar o arquivo corrigido:
+                        Escolha como você deseja gerar o arquivo corrigido. Suas edições manuais serão sempre mantidas.
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <div className="grid gap-4 py-4">
-                    <Button variant="default" onClick={() => handleProceedWithCorrection(false)}>
-                        <Download className="mr-2 h-4 w-4" />
-                        Baixar com Correções Manuais
-                        <p className="font-light ml-2 text-primary-foreground/80">(Usa suas edições)</p>
+                    <Button variant="default" className="h-auto" onClick={() => handleProceedWithCorrection(false)}>
+                        <div className="flex items-center">
+                            <Download className="mr-4 h-5 w-5" />
+                            <div className="text-left">
+                                <p className="font-semibold">Baixar com Correções Manuais</p>
+                                <p className="text-xs text-primary-foreground/80">Salva o arquivo apenas com as alterações que você fez manualmente.</p>
+                            </div>
+                        </div>
                     </Button>
-                    <Button variant="secondary" onClick={() => handleProceedWithCorrection(true)}>
-                        <Wrench className="mr-2 h-4 w-4" />
-                        Baixar com Correção Automática
-                         <p className="font-light ml-2 text-secondary-foreground/80">(A ferramenta tenta corrigir)</p>
+                    <Button variant="secondary" className="h-auto" onClick={() => handleProceedWithCorrection(true)}>
+                         <div className="flex items-center">
+                            <Wrench className="mr-4 h-5 w-5" />
+                            <div className="text-left">
+                                <p className="font-semibold">Usar Correção Automática</p>
+                                <p className="text-xs text-secondary-foreground/80">A ferramenta tenta corrigir os erros restantes. Use com atenção.</p>
+                            </div>
+                        </div>
                     </Button>
                 </div>
                 <AlertDialogFooter>
@@ -1281,5 +1289,3 @@ export function FileValidator() {
     </div>
   );
 }
-
-    
