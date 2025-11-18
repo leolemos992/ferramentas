@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils';
 import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
+import { Badge } from './ui/badge';
 
 type XmlNode = {
   tagName: string;
@@ -271,10 +272,13 @@ export function XmlAnalyzer() {
     <div className="w-full">
       <Card>
         <CardHeader>
-          <CardTitle className="text-2xl font-bold tracking-tight flex items-center gap-2">
-            <CodeXml />
-            Analisador de Estrutura XML
-          </CardTitle>
+            <div className="flex items-center gap-4">
+                <CardTitle className="text-2xl font-bold tracking-tight flex items-center gap-2">
+                    <CodeXml />
+                    Analisador de Estrutura XML
+                </CardTitle>
+                <Badge variant="outline">BETA</Badge>
+            </div>
           <CardDescription>
             Cole o conteúdo de um XML ou faça o upload de um arquivo para visualizar sua estrutura em árvore.
           </CardDescription>
