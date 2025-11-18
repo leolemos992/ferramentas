@@ -519,7 +519,7 @@ type LineResult = {
   originalLineContent: string;
   currentLineContent: string;
   recordType?: string;
-  errors: { message: string; columnIndex: number }[];
+  errors: { message: string; columnIndex: number; isFieldCountError?: boolean }[];
 };
 
 type GroupedErrors = {
@@ -563,6 +563,9 @@ function InvalidLineItem({ result, onUpdateLine }: { result: LineResult; onUpdat
   
   const getHighlightedLine = (lineContent: string) => {
     const fields = lineContent.split(';');
+    const rule = result.recordType ? validationRules[result.recordType] : undefined;
+    const expectedFieldCount = rule?.fieldCount;
+    const isFieldCountError = result.errors.some(e => e.isFieldCountError);
     const errorColumns = result.errors.map(e => e.columnIndex);
   
     return (
@@ -577,12 +580,17 @@ function InvalidLineItem({ result, onUpdateLine }: { result: LineResult; onUpdat
                 : "bg-secondary/50"
         )}
       >
-        {fields.map((field, index) => (
-            <span key={index} className={cn(errorColumns.includes(index) ? "bg-red-200 text-red-900 rounded-sm p-0.5" : "")}>
+        {fields.map((field, index) => {
+          let isError = errorColumns.includes(index);
+          if (!isError && isFieldCountError && expectedFieldCount && index >= expectedFieldCount) {
+            isError = true;
+          }
+          return (
+            <span key={index} className={cn(isError ? "bg-red-200 text-red-900 rounded-sm p-0.5" : "")}>
               {field}{index < fields.length - 1 && <span className="text-gray-400 mx-px">;</span>}
             </span>
           )
-        )}
+        })}
       </div>
     );
   };
@@ -615,7 +623,7 @@ function InvalidLineItem({ result, onUpdateLine }: { result: LineResult; onUpdat
         <h4 className="font-semibold text-sm mb-1 text-red-800">Erros Encontrados:</h4>
         <ul className="space-y-1 list-disc pl-5">
           {result.errors.map((error, index) => {
-            const fieldRule = result.recordType ? validationRules[result.recordType]?.fields[error.columnIndex] : null;
+            const fieldRule = result.recordType && error.columnIndex >= 0 ? validationRules[result.recordType]?.fields[error.columnIndex] : null;
             const fieldName = fieldRule ? fieldRule.name : 'Geral';
             return (
               <li key={index} className="text-red-700 text-xs font-sans">
@@ -749,7 +757,8 @@ export function FileValidator() {
         if (recordType !== 'XL' && fields.length !== rule.fieldCount) {
              lineErrors.push({
                 message: `O registro '${recordType}' deve ter ${rule.fieldCount} campos, mas foram encontrados ${fields.length}.`,
-                columnIndex: -1 // General line error
+                columnIndex: -1, // General line error
+                isFieldCountError: true,
             });
         }
 
@@ -1266,5 +1275,3 @@ export function FileValidator() {
     </div>
   );
 }
-
-    
