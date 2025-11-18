@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
-  const version = "1.0.0"; 
+  const version = "0.0.0.1"; 
 
   return (
     <footer className="w-full bg-background border-t border-border mt-auto">
