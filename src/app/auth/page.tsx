@@ -9,19 +9,15 @@ import { useToast } from "@/hooks/use-toast";
 import { Label } from "@/components/ui/label";
 import { KeyRound, LogIn } from "lucide-react";
 
-async function generateDailyPassword(seed: string): Promise<string> {
+function generateDailyPassword(): string {
   const date = new Date();
-  const dateString = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
-  const dataToHash = seed + dateString;
-
-  const encoder = new TextEncoder();
-  const data = encoder.encode(dataToHash);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const day = date.getDate();
+  const month = date.getMonth() + 1; // Month is 0-indexed
+  const year = date.getFullYear() % 100; // Get last two digits of the year
   
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  const password = day * month * year * 3;
   
-  return hashHex.substring(0, 8);
+  return password.toString();
 }
 
 
@@ -35,19 +31,7 @@ export default function AuthPage() {
     e.preventDefault();
     setLoading(true);
 
-    const secretSeed = process.env.NEXT_PUBLIC_COMPARATOR_SECRET_SEED;
-
-    if (!secretSeed) {
-      toast({
-        variant: "destructive",
-        title: "Erro de Configuração",
-        description: "O segredo de acesso não foi configurado corretamente.",
-      });
-      setLoading(false);
-      return;
-    }
-
-    const correctPassword = await generateDailyPassword(secretSeed);
+    const correctPassword = generateDailyPassword();
 
     if (password === correctPassword) {
       try {
@@ -86,7 +70,7 @@ export default function AuthPage() {
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="password">Senha</Label>
+              <Label htmlFor="password">Senha Técnica Diária</Label>
               <Input
                 id="password"
                 type="password"
