@@ -47,6 +47,7 @@ export default function AuthPage() {
     if (password === correctPassword) {
       try {
         sessionStorage.setItem("isAuthorized", "true");
+        sessionStorage.setItem("authTimestamp", new Date().getTime().toString());
         router.push("/dictionary-comparison");
       } catch (error) {
         toast({

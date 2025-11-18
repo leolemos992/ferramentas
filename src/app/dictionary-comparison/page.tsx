@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ArrowLeft, Loader2 } from "lucide-react";
 
+const AUTH_TIMEOUT = 15 * 60 * 1000; // 15 minutos em milissegundos
+
 export default function DictionaryComparisonPage() {
   const router = useRouter();
   const [isAuthorized, setIsAuthorized] = useState(false);
@@ -15,7 +17,19 @@ export default function DictionaryComparisonPage() {
   useEffect(() => {
     try {
       const authorized = sessionStorage.getItem("isAuthorized") === "true";
-      if (!authorized) {
+      const authTimestamp = sessionStorage.getItem("authTimestamp");
+      
+      if (!authorized || !authTimestamp) {
+        router.replace("/auth");
+        return;
+      }
+      
+      const lastAuthTime = parseInt(authTimestamp, 10);
+      const now = new Date().getTime();
+
+      if (now - lastAuthTime > AUTH_TIMEOUT) {
+        sessionStorage.removeItem("isAuthorized");
+        sessionStorage.removeItem("authTimestamp");
         router.replace("/auth");
       } else {
         setIsAuthorized(true);
