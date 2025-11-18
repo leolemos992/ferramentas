@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -15,15 +15,13 @@ async function generateDailyPassword(): Promise<string> {
   const month = date.getMonth() + 1; // Month is 0-indexed
   const year = date.getFullYear() % 100; // Get last two digits of the year
   
-  const secretSeed = (day * month * year * 3).toString();
+  const technicalPassword = (day * month * year * 3).toString();
 
-  const encoder = new TextEncoder();
-  const data = encoder.encode(secretSeed);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  const daySum = day.toString().split('').reduce((sum, digit) => sum + parseInt(digit, 10), 0);
+  const monthSum = month.toString().split('').reduce((sum, digit) => sum + parseInt(digit, 10), 0);
+  const combination = (daySum + monthSum).toString();
   
-  return hashHex.slice(0, 8);
+  return technicalPassword + combination;
 }
 
 
@@ -32,12 +30,19 @@ export default function AuthPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
+  const [correctPassword, setCorrectPassword] = useState("");
+
+  useEffect(() => {
+    async function fetchPassword() {
+        const pass = await generateDailyPassword();
+        setCorrectPassword(pass);
+    }
+    fetchPassword();
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-
-    const correctPassword = await generateDailyPassword();
 
     if (password === correctPassword) {
       try {
@@ -86,7 +91,7 @@ export default function AuthPage() {
                 placeholder="********"
               />
             </div>
-            <Button type="submit" className="w-full" disabled={loading}>
+            <Button type="submit" className="w-full" disabled={loading || !correctPassword}>
                 <LogIn className="mr-2 h-4 w-4" />
               {loading ? "Verificando..." : "Entrar"}
             </Button>
