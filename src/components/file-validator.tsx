@@ -12,7 +12,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { X, CheckCircle, AlertCircle, UploadCloud, FileCheck, Trash2, Loader2, Wrench, Download, FileText, Edit, Save } from "lucide-react";
+import { X, CheckCircle, AlertCircle, UploadCloud, FileCheck, Trash2, Loader2, Wrench, Download, FileText, Edit, Save, List, Group } from "lucide-react";
 import { Label } from "./ui/label";
 import { cn } from "@/lib/utils";
 import { Badge } from "./ui/badge";
@@ -534,6 +534,7 @@ type GroupedErrors = {
     [key: string]: ErrorOccurrence[];
 };
 
+type ErrorView = 'list' | 'grouped';
 
 const recordTypeNames: { [key: string]: string } = {
     OP: "Operação",
@@ -591,7 +592,7 @@ function InvalidLineItem({ result, onUpdateLine }: { result: LineResult; onUpdat
       >
         {fields.map((field, index) => {
           let isError = errorColumns.includes(index);
-          if (!isError && isFieldCountError && expectedFieldCount && index >= expectedFieldCount - 1) {
+          if (!isError && isFieldCountError && expectedFieldCount && recordType !== 'XL' && index >= expectedFieldCount) {
             isError = true;
           }
           return (
@@ -647,7 +648,7 @@ function InvalidLineItem({ result, onUpdateLine }: { result: LineResult; onUpdat
 }
 
 
-function InvalidLinesList({ invalidLines, onUpdateLine }: { invalidLines: LineResult[], onUpdateLine: (lineNumber: number, newContent: string) => void; }) {
+function GroupedInvalidLinesList({ invalidLines, onUpdateLine }: { invalidLines: LineResult[], onUpdateLine: (lineNumber: number, newContent: string) => void; }) {
   const groupedErrors = useMemo<GroupedErrors>(() => {
     const allErrors: ErrorOccurrence[] = [];
     invalidLines.forEach(line => {
@@ -691,6 +692,18 @@ function InvalidLinesList({ invalidLines, onUpdateLine }: { invalidLines: LineRe
   );
 }
 
+function SimpleInvalidLinesList({ invalidLines, onUpdateLine }: { invalidLines: LineResult[], onUpdateLine: (lineNumber: number, newContent: string) => void; }) {
+    return (
+        <ScrollArea className="h-96 w-full rounded-md border">
+            <div className="p-4">
+            {invalidLines.map((result) => (
+                <InvalidLineItem key={result.lineNumber} result={result} onUpdateLine={onUpdateLine} />
+            ))}
+            </div>
+        </ScrollArea>
+    );
+}
+
 
 export function FileValidator() {
   const [file, setFile] = useState<File | null>(null);
@@ -701,6 +714,7 @@ export function FileValidator() {
   const [isDragging, setIsDragging] = useState(false);
   const [activeTab, setActiveTab] = useState("errors");
   const [isConfirmingCorrection, setIsConfirmingCorrection] = useState(false);
+  const [errorView, setErrorView] = useState<ErrorView>('grouped');
 
 
   const handleFileDrop = (selectedFile: File | undefined) => {
@@ -785,6 +799,7 @@ export function FileValidator() {
       }
   
       rule.fields.forEach((fieldRule, index) => {
+        if (recordType !== 'XL' && index >= rule.fieldCount) return;
         if (index >= fields.length) return; // Don't validate fields that don't exist due to wrong field count
         const fieldValue = fields[index]?.trim();
   
@@ -878,9 +893,9 @@ export function FileValidator() {
     let fields = lineResult.currentLineContent.split(';');
 
     // Rule 1: Field count
-    if (fields.length < rule.fieldCount) {
+    if (recordType !== 'XL' && fields.length < rule.fieldCount) {
         fields = [...fields, ...Array(rule.fieldCount - fields.length).fill('')];
-    } else if (fields.length > rule.fieldCount) {
+    } else if (recordType !== 'XL' && fields.length > rule.fieldCount) {
         fields.length = rule.fieldCount;
     }
     
@@ -1056,14 +1071,21 @@ export function FileValidator() {
 
 
   const { validLines, invalidLines, fileContent } = useMemo(() => {
+    const valid: LineResult[] = [];
+    const invalid: LineResult[] = [];
     let content = "";
-    const valid = results.filter(r => r.originalLineContent.trim() !== '' && r.errors.length === 0);
-    const invalid = results.filter(r => r.errors.length > 0);
-
+    
     results.forEach(r => {
-        if (r.originalLineContent) {
-          content += r.originalLineContent + '\n';
+      if (r.originalLineContent.trim() !== '') {
+        if (r.errors.length === 0) {
+          valid.push(r);
+        } else {
+          invalid.push(r);
         }
+      }
+      if (r.originalLineContent) {
+        content += r.originalLineContent + '\n';
+      }
     });
 
     return { validLines: valid, invalidLines: invalid, fileContent: content };
@@ -1239,10 +1261,32 @@ export function FileValidator() {
                                     <p className="text-muted-foreground">Todas as linhas foram validadas com sucesso.</p>
                                 </div>
                             ) : (
-                                <InvalidLinesList 
-                                    invalidLines={invalidLines}
-                                    onUpdateLine={handleManualLineUpdate}
-                                />
+                                <div className="space-y-4">
+                                    <div className="flex justify-end">
+                                        <div className="flex items-center gap-1 rounded-md bg-muted p-1">
+                                            <Button variant={errorView === 'list' ? 'secondary' : 'ghost'} size="sm" onClick={() => setErrorView('list')}>
+                                                <List className="mr-2 h-4 w-4"/>
+                                                Visão por Linhas
+                                            </Button>
+                                            <Button variant={errorView === 'grouped' ? 'secondary' : 'ghost'} size="sm" onClick={() => setErrorView('grouped')}>
+                                                <Group className="mr-2 h-4 w-4" />
+                                                Visão Agrupada
+                                            </Button>
+                                        </div>
+                                    </div>
+
+                                    {errorView === 'list' ? (
+                                        <SimpleInvalidLinesList 
+                                            invalidLines={invalidLines}
+                                            onUpdateLine={handleManualLineUpdate}
+                                        />
+                                    ) : (
+                                        <GroupedInvalidLinesList 
+                                            invalidLines={invalidLines}
+                                            onUpdateLine={handleManualLineUpdate}
+                                        />
+                                    )}
+                                </div>
                             )}
                         </TabsContent>
                         <TabsContent value="valid" className="mt-4">
@@ -1311,3 +1355,4 @@ export function FileValidator() {
     </div>
   );
 }
+
