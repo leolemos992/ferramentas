@@ -99,11 +99,16 @@ const XmlNodeViewer: React.FC<{ node: XmlNode | string, defaultOpen?: boolean }>
     return (
       <div className="group flex items-center gap-2 pl-6 py-1 text-sm text-amber-700 dark:text-amber-300 italic">
         {`"${node}"`}
-        <TooltipTrigger asChild>
-          <Button variant="ghost" size="icon" className="h-5 w-5 opacity-0 group-hover:opacity-100" onClick={() => handleCopy(node, 'Conteúdo de texto copiado.')}>
-            <Copy className="h-3 w-3" />
-          </Button>
-        </TooltipTrigger>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-5 w-5 opacity-0 group-hover:opacity-100" onClick={() => handleCopy(node, 'Conteúdo de texto copiado.')}>
+              <Copy className="h-3 w-3" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Copiar texto</p>
+          </TooltipContent>
+        </Tooltip>
       </div>
     );
   }
@@ -125,11 +130,16 @@ const XmlNodeViewer: React.FC<{ node: XmlNode | string, defaultOpen?: boolean }>
         {Object.entries(node.attributes).map(([key, value]) => (
           <span key={key} className="text-red-500 dark:text-red-400 group/attr relative">
             {' '}{key}=<span className="text-green-600 dark:text-green-400">{`"${value}"`}</span>
-            <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-5 w-5 opacity-0 group-hover/attr:opacity-100" onClick={(e) => { e.stopPropagation(); handleCopy(value, `Valor do atributo '${key}' copiado.`);}}>
-                    <Copy className="h-3 w-3" />
-                </Button>
-            </TooltipTrigger>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-5 w-5 opacity-0 group-hover/attr:opacity-100" onClick={(e) => { e.stopPropagation(); handleCopy(value, `Valor do atributo '${key}' copiado.`);}}>
+                      <Copy className="h-3 w-3" />
+                  </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Copiar valor do atributo</p>
+              </TooltipContent>
+            </Tooltip>
           </span>
         ))}
         {node.isSelfClosing ? (
@@ -139,11 +149,16 @@ const XmlNodeViewer: React.FC<{ node: XmlNode | string, defaultOpen?: boolean }>
         )}
         {!hasChildren && !node.isSelfClosing && <span className="text-blue-600 dark:text-blue-400">{`</${node.tagName}>`}</span>}
         
-        <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-5 w-5 opacity-0 group-hover:opacity-100" onClick={(e) => { e.stopPropagation(); handleCopy(serializeNode(node), `Nó <${node.tagName}> copiado como XML.`); }}>
-                <CodeXml className="h-3 w-3" />
-            </Button>
-        </TooltipTrigger>
+        <Tooltip>
+          <TooltipTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-5 w-5 opacity-0 group-hover:opacity-100" onClick={(e) => { e.stopPropagation(); handleCopy(serializeNode(node), `Nó <${node.tagName}> copiado como XML.`); }}>
+                  <CodeXml className="h-3 w-3" />
+              </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Copiar nó como XML</p>
+          </TooltipContent>
+        </Tooltip>
       </div>
       
       {isOpen && hasChildren && (
@@ -359,5 +374,3 @@ export function XmlAnalyzer() {
     </div>
   );
 }
-
-    
