@@ -1052,7 +1052,7 @@ export function FileValidator() {
         invalidLines: invalidLines.length,
         recordTypes: recordTypeNamesFound || 'Nenhum'
     };
-  }, [results, validLines.length, invalidLines.length]);
+  }, [results, validLines, invalidLines]);
 
 
   if (!file && !loading) {
@@ -1175,7 +1175,7 @@ export function FileValidator() {
                                 <CardTitle className="text-sm font-medium">Linhas com Erro</CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <div className="text-3xl font-bold text-red-600 flex items-center">{stats.invalidLines.length} <AlertCircle className="ml-2 h-6 w-6"/></div>
+                                <div className="text-3xl font-bold text-red-600 flex items-center">{stats.invalidLines} <AlertCircle className="ml-2 h-6 w-6"/></div>
                             </CardContent>
                         </Card>
                         <Card>
@@ -1266,3 +1266,5 @@ export function FileValidator() {
     </div>
   );
 }
+
+    
