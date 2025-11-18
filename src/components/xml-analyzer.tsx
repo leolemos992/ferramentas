@@ -169,7 +169,7 @@ const XmlNodeViewer: React.FC<{ node: XmlNode | string, defaultOpen?: boolean }>
           ))}
           <div className="flex items-center gap-1 py-1 px-2 text-blue-600 dark:text-blue-400">
             <span className="w-4"></span>
-            {`</${node.tagName}>`}
+            {`</`}{node.tagName}{`>`}
           </div>
         </div>
       )}
@@ -284,7 +284,7 @@ export function XmlAnalyzer() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+           <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] items-center gap-4 md:gap-8">
                 <div className="space-y-4">
                     <Label htmlFor="xml-input">Colar XML</Label>
                     <Textarea 
@@ -302,10 +302,13 @@ export function XmlAnalyzer() {
                         </Button>
                      </div>
                 </div>
-                 <div className="space-y-4 flex flex-col items-center justify-center">
-                    <p className="text-muted-foreground text-sm">ou</p>
-                     <Label htmlFor="file-upload" className={cn(
-                        "flex flex-col items-center justify-center w-full h-48 border-2 border-dashed rounded-lg cursor-pointer bg-card hover:bg-secondary/50 transition-colors",
+                <div className="flex items-center justify-center">
+                    <p className="text-muted-foreground text-sm my-4 md:my-0">ou</p>
+                </div>
+                 <div className="space-y-4">
+                    <Label htmlFor="file-upload" className='sr-only'>Fazer upload</Label>
+                     <label htmlFor="file-upload" className={cn(
+                        "flex flex-col items-center justify-center w-full h-full min-h-48 border-2 border-dashed rounded-lg cursor-pointer bg-card hover:bg-secondary/50 transition-colors",
                         {"pointer-events-none opacity-50": loading}
                       )}>
                          <div className="flex flex-col items-center justify-center pt-5 pb-6">
@@ -317,7 +320,7 @@ export function XmlAnalyzer() {
                             </p>
                             <p className="text-xs text-muted-foreground">Arquivo .XML</p>
                         </div>
-                    </Label>
+                    </label>
                     <Input
                         id="file-upload"
                         type="file"
