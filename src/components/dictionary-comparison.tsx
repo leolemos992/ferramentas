@@ -199,7 +199,7 @@ export function DictionaryComparison() {
     const changes: React.ReactNode[] = [];
     if (oldCol.type !== newCol.type) {
       changes.push(
-        <div className="flex items-center gap-2">
+        <div key="type" className="flex items-center gap-2">
           <CaseSensitive className="h-4 w-4 text-muted-foreground" />
           <span className="font-semibold">Tipo:</span>
           <Badge variant="outline">{oldCol.type}</Badge>
@@ -210,7 +210,7 @@ export function DictionaryComparison() {
     }
     if (oldCol.size !== newCol.size) {
       changes.push(
-        <div className="flex items-center gap-2">
+        <div key="size" className="flex items-center gap-2">
           <CaseSensitive className="h-4 w-4 text-muted-foreground" />
           <span className="font-semibold">Tamanho:</span>
           <Badge variant="outline">{oldCol.size || 'N/A'}</Badge>
@@ -221,7 +221,7 @@ export function DictionaryComparison() {
     }
     if (oldCol.description !== newCol.description) {
         changes.push(
-          <div className="flex items-start gap-2">
+          <div key="description" className="flex items-start gap-2">
             <CaseSensitive className="h-4 w-4 text-muted-foreground mt-1" />
             <div className="flex flex-col">
               <span className="font-semibold">Descrição:</span>
@@ -360,4 +360,5 @@ export function DictionaryComparison() {
   );
 }
 
+    
     
