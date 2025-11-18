@@ -745,54 +745,58 @@ export function FileValidator() {
     const lineErrors: LineResult['errors'] = [];
     const fields = line.split(";");
     const recordType = fields[0]?.trim();
-
+  
     if (!recordType && line.trim() === '') {
-        return { lineNumber, originalLineContent: line, currentLineContent: line, errors: [] }; // Ignore empty lines
+      return { lineNumber, originalLineContent: line, currentLineContent: line, errors: [] }; // Ignore empty lines
     }
-
+  
     const rule = validationRules[recordType];
     if (!rule) {
-        lineErrors.push({ message: `Tipo de registro desconhecido '${recordType}'.`, columnIndex: 0 });
+      lineErrors.push({ message: `Tipo de registro desconhecido '${recordType}'. Sugestão: Verifique se o identificador no início da linha está correto.`, columnIndex: 0 });
     } else {
-        if (recordType !== 'XL' && fields.length !== rule.fieldCount) {
-             lineErrors.push({
-                message: `O registro '${recordType}' deve ter ${rule.fieldCount} campos, mas foram encontrados ${fields.length}.`,
-                columnIndex: -1, // General line error
-                isFieldCountError: true,
-            });
-        }
-
-        rule.fields.forEach((fieldRule, index) => {
-            if (index >= fields.length) return; // Don't validate fields that don't exist due to wrong field count
-            const fieldValue = fields[index]?.trim();
-
-            if (fieldRule.required && !fieldValue) {
-                lineErrors.push({ message: `Campo obrigatório não preenchido.`, columnIndex: index });
-            }
-
-            if (fieldValue) {
-                if (fieldRule.maxLength !== Infinity && fieldValue.length > fieldRule.maxLength) {
-                    lineErrors.push({ message: `Excede o tamanho máximo de ${fieldRule.maxLength} (atual: ${fieldValue.length}).`, columnIndex: index });
-                }
-                
-                if (fieldRule.type === 'N') {
-                    if (!/^-?\d*[,.]?\d*$/.test(fieldValue.replace(/\./g, ''))) { // Allow dot for thousands and comma for decimal
-                        lineErrors.push({ message: `Deve ser um valor numérico.`, columnIndex: index });
-                    } else if (fieldRule.decimals !== undefined) {
-                        const parts = fieldValue.split(',');
-                        if (parts[1] && parts[1].length > fieldRule.decimals) {
-                           lineErrors.push({ message: `Deve ter no máximo ${fieldRule.decimals} casas decimais.`, columnIndex: index });
-                        }
-                    }
-                } else if (fieldRule.type === 'D' && !/^\d{8}$/.test(fieldValue)) {
-                    lineErrors.push({ message: `Deve estar no formato de data AAAAMMDD.`, columnIndex: index });
-                } else if (fieldRule.type === 'T' && !/^\d{14}$/.test(fieldValue)) {
-                    lineErrors.push({ message: `Deve estar no formato de data/hora AAAAMMDDHHMMSS.`, columnIndex: index });
-                }
-            }
+      if (recordType !== 'XL' && fields.length !== rule.fieldCount) {
+        const message = fields.length > rule.fieldCount
+          ? `O registro '${recordType}' espera ${rule.fieldCount} campos, mas ${fields.length} foram encontrados. Sugestão: Remova os campos excedentes ou verifique se há ';' extras no conteúdo.`
+          : `O registro '${recordType}' espera ${rule.fieldCount} campos, mas apenas ${fields.length} foram encontrados. Sugestão: Preencha os campos faltantes mantendo a ordem correta.`;
+        
+        lineErrors.push({
+          message: message,
+          columnIndex: -1, // General line error
+          isFieldCountError: true,
         });
+      }
+  
+      rule.fields.forEach((fieldRule, index) => {
+        if (index >= fields.length) return; // Don't validate fields that don't exist due to wrong field count
+        const fieldValue = fields[index]?.trim();
+  
+        if (fieldRule.required && !fieldValue) {
+          lineErrors.push({ message: `Campo obrigatório não preenchido. Sugestão: Insira um valor válido.`, columnIndex: index });
+        }
+  
+        if (fieldValue) {
+          if (fieldRule.maxLength !== Infinity && fieldValue.length > fieldRule.maxLength) {
+            lineErrors.push({ message: `Excede o tamanho máximo de ${fieldRule.maxLength} (atual: ${fieldValue.length}). Sugestão: Reduza o conteúdo do campo.`, columnIndex: index });
+          }
+          
+          if (fieldRule.type === 'N') {
+            if (!/^-?\d*[,.]?\d*$/.test(fieldValue.replace(/\./g, ''))) {
+              lineErrors.push({ message: `Deve ser um valor numérico. Sugestão: Remova caracteres não numéricos.`, columnIndex: index });
+            } else if (fieldRule.decimals !== undefined) {
+              const parts = fieldValue.split(',');
+              if (parts[1] && parts[1].length > fieldRule.decimals) {
+                 lineErrors.push({ message: `Deve ter no máximo ${fieldRule.decimals} casas decimais. Sugestão: Arredonde ou ajuste o valor.`, columnIndex: index });
+              }
+            }
+          } else if (fieldRule.type === 'D' && !/^\d{8}$/.test(fieldValue)) {
+            lineErrors.push({ message: `Deve estar no formato de data AAAAMMDD. Sugestão: Corrija o formato (ex: 20240801).`, columnIndex: index });
+          } else if (fieldRule.type === 'T' && !/^\d{14}$/.test(fieldValue)) {
+            lineErrors.push({ message: `Deve estar no formato de data/hora AAAAMMDDHHMMSS. Sugestão: Corrija o formato (ex: 20240801153000).`, columnIndex: index });
+          }
+        }
+      });
     }
-
+  
     return { lineNumber, originalLineContent: line, currentLineContent: line, recordType, errors: lineErrors };
   };
 
@@ -1039,7 +1043,9 @@ export function FileValidator() {
     let content = "";
 
     results.forEach(r => {
-        content += r.originalLineContent + '\n';
+        if (r.originalLineContent) {
+          content += r.originalLineContent + '\n';
+        }
         if (r.errors.length > 0) {
             invalid.push(r);
         } else if (r.originalLineContent.trim() !== '') {
@@ -1275,3 +1281,5 @@ export function FileValidator() {
     </div>
   );
 }
+
+    
