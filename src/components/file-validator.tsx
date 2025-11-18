@@ -1067,7 +1067,7 @@ export function FileValidator() {
         invalidLines: invalidLines.length,
         recordTypes: recordTypeNamesFound || 'Nenhum'
     };
-  }, [results, validLines, invalidLines]);
+  }, [results, validLines.length, invalidLines.length]);
 
 
   if (!file && !loading) {
@@ -1139,6 +1139,15 @@ export function FileValidator() {
 
   return (
     <div className="w-full max-w-7xl mx-auto space-y-6">
+        <Input
+            id="file-upload-hidden"
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileChange}
+            accept=".txt,.csv"
+            className="sr-only"
+            disabled={loading}
+        />
         {results.length > 0 && (
             <Card className="animate-in fade-in-50 duration-500">
                 <CardHeader>
