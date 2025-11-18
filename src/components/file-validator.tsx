@@ -1102,7 +1102,7 @@ export function FileValidator() {
         invalidLines: invalidLines.length,
         recordTypes: recordTypeNamesFound || 'Nenhum'
     };
-  }, [results, validLines, invalidLines]);
+  }, [results, validLines.length, invalidLines.length]);
 
 
   if (!file && !loading) {
@@ -1270,7 +1270,7 @@ export function FileValidator() {
                                             </Button>
                                             <Button variant={errorView === 'grouped' ? 'secondary' : 'ghost'} size="sm" onClick={() => setErrorView('grouped')}>
                                                 <Group className="mr-2 h-4 w-4" />
-                                                Visão Agrupada
+                                                Agrupar Erros
                                             </Button>
                                         </div>
                                     </div>
