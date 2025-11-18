@@ -1,6 +1,16 @@
 {
     "notes": [
         {
+            "version": "0.0.0.4",
+            "date": "2024-08-02",
+            "changes": [
+                "Melhorada a interface do Comparador de Dicionários para um assistente passo a passo.",
+                "Adicionados filtros por nome de tabela e tipo de alteração (adicionada, removida, modificada) na tela de resultados.",
+                "Refinada a exibição visual das diferenças, com ícones, cores e detalhes das modificações.",
+                "Corrigido erro de 'key prop' no React para melhorar a performance da renderização."
+            ]
+        },
+        {
             "version": "0.0.0.3",
             "date": "2024-08-01",
             "changes": [
