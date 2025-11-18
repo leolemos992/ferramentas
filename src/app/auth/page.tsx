@@ -72,11 +72,6 @@ export default function AuthPage() {
     <>
       <main className="flex min-h-screen flex-col items-center justify-center bg-muted/40 p-4">
         <div className="w-full max-w-sm">
-            <Link href="/" className="mb-4 inline-block">
-              <Button variant="outline">
-                <ArrowLeft className="mr-2 h-4 w-4" /> Voltar para o início
-              </Button>
-            </Link>
           <Card>
             <CardHeader className="text-center">
               <CardTitle className="text-2xl font-bold flex items-center justify-center gap-2">
@@ -107,6 +102,13 @@ export default function AuthPage() {
               </form>
             </CardContent>
           </Card>
+          <div className="mt-4 text-center">
+             <Link href="/" className="w-full">
+              <Button variant="outline" className="w-full">
+                <ArrowLeft className="mr-2 h-4 w-4" /> Voltar para o início
+              </Button>
+            </Link>
+          </div>
         </div>
       </main>
       <Toaster />
