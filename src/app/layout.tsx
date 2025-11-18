@@ -21,7 +21,7 @@ const Footer = () => {
         <p>
           Criado por:{' '}
           <a
-            href="https://github.com/leolemos"
+            href="https://www.instagram.com/leo.lemos992/"
             target="_blank"
             rel="noopener noreferrer"
             className="font-medium text-primary hover:underline"
