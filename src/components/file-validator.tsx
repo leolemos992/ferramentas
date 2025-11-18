@@ -552,10 +552,12 @@ const recordTypeNames: { [key: string]: string } = {
 
 function InvalidLineItem({ result, onUpdateLine }: { result: LineResult; onUpdateLine: (lineNumber: number, newContent: string) => void; }) {
   const [isEditing, setIsEditing] = useState(false);
-  const [editedContent, setEditedContent] = useState(result.currentLineContent);
+  const editorRef = useRef<HTMLDivElement>(null);
 
   const handleSave = () => {
-    onUpdateLine(result.lineNumber, editedContent);
+    if (editorRef.current) {
+        onUpdateLine(result.lineNumber, editorRef.current.innerText);
+    }
     setIsEditing(false);
   };
   
@@ -564,9 +566,19 @@ function InvalidLineItem({ result, onUpdateLine }: { result: LineResult; onUpdat
     const errorColumns = result.errors.map(e => e.columnIndex);
   
     return (
-      <div className="font-mono text-xs whitespace-pre-wrap break-all">
+      <div 
+        ref={editorRef}
+        contentEditable={isEditing}
+        suppressContentEditableWarning={true}
+        className={cn(
+            "font-mono text-xs whitespace-pre-wrap break-all p-2 rounded-md border",
+            isEditing 
+                ? "bg-white dark:bg-black focus:outline-blue-500 focus:ring-2 ring-blue-300"
+                : "bg-secondary/50"
+        )}
+      >
         {fields.map((field, index) => (
-            <span key={index} className={cn(errorColumns.includes(index) ? "bg-red-200 text-red-900 rounded-sm p-0.5" : "")}>
+            <span key={index} className={cn(errorColumns.includes(index) && !isEditing ? "bg-red-200 text-red-900 rounded-sm p-0.5" : "")}>
               {field}{index < fields.length - 1 && <span className="text-gray-400 mx-px">;</span>}
             </span>
           )
@@ -583,26 +595,18 @@ function InvalidLineItem({ result, onUpdateLine }: { result: LineResult; onUpdat
             <div className="font-semibold text-sm">Linha {result.lineNumber}:</div>
             <Badge variant="destructive">{result.recordType || 'N/A'}</Badge>
           </div>
-          {isEditing ? (
-            <div className="mt-2 space-y-2">
-                <Input 
-                    value={editedContent}
-                    onChange={(e) => setEditedContent(e.target.value)}
-                    className="font-mono text-xs h-8"
-                />
-                <div className="flex gap-2">
-                    <Button size="sm" onClick={handleSave}><Save className="mr-2 h-4 w-4"/> Salvar</Button>
-                    <Button size="sm" variant="ghost" onClick={() => setIsEditing(false)}>Cancelar</Button>
-                </div>
-            </div>
-          ) : (
-            <div className="mt-1 p-2 bg-secondary/50 rounded-md border text-xs font-mono">
-                {getHighlightedLine(result.currentLineContent)}
+          <div className="mt-1">
+            {getHighlightedLine(result.currentLineContent)}
+          </div>
+          {isEditing && (
+             <div className="flex gap-2 mt-2">
+                <Button size="sm" onClick={handleSave}><Save className="mr-2 h-4 w-4"/> Salvar</Button>
+                <Button size="sm" variant="ghost" onClick={() => setIsEditing(false)}>Cancelar</Button>
             </div>
           )}
         </div>
         {!isEditing && (
-            <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => { setEditedContent(result.currentLineContent); setIsEditing(true);}}>
+            <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => setIsEditing(true)}>
                 <Edit className="h-4 w-4" />
             </Button>
         )}
