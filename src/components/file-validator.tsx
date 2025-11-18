@@ -641,7 +641,11 @@ function InvalidLineItem({ result, onUpdateLine }: { result: LineResult; onUpdat
 function InvalidLinesList({ invalidLines, onUpdateLine }: { invalidLines: LineResult[], onUpdateLine: (lineNumber: number, newContent: string) => void; }) {
   const groupedErrors = useMemo<GroupedErrors>(() => {
     return invalidLines.reduce((acc, result) => {
-      const mainErrorMessage = result.errors[0]?.message || 'Erro desconhecido';
+      const firstError = result.errors[0];
+      if (!firstError) return acc;
+
+      const mainErrorMessage = firstError.message.split(' Sugestão:')[0] || 'Erro desconhecido';
+      
       if (!acc[mainErrorMessage]) {
         acc[mainErrorMessage] = [];
       }
@@ -1298,3 +1302,5 @@ export function FileValidator() {
     </div>
   );
 }
+
+    
