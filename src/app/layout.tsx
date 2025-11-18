@@ -1,5 +1,6 @@
 import type {Metadata} from 'next';
 import './globals.css';
+import { PatchNotes } from '@/components/patch-notes';
 
 export const metadata: Metadata = {
   title: 'Firebase Studio App',
@@ -8,12 +9,15 @@ export const metadata: Metadata = {
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
-  const version = "0.0.0.1"; 
+  const version = "0.0.0.2"; 
 
   return (
     <footer className="w-full bg-background border-t border-border mt-auto">
       <div className="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row justify-between items-center text-sm text-muted-foreground">
-        <p>Versão {version}</p>
+        <div className='flex items-center gap-4'>
+            <p>Versão {version}</p>
+            <PatchNotes />
+        </div>
         <p>
           &copy; {currentYear} Desenvolvido por{' '}
           <a

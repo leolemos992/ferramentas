@@ -1,0 +1,19 @@
+{
+    "notes": [
+        {
+            "version": "0.0.0.2",
+            "date": "2024-08-01",
+            "changes": [
+                "Adicionado botão e painel de Patch Notes no rodapé.",
+                "Incremento de versão passa a ser automático a cada ajuste."
+            ]
+        },
+        {
+            "version": "0.0.0.1",
+            "date": "2024-08-01",
+            "changes": [
+                "Configuração inicial do controle de versão no rodapé."
+            ]
+        }
+    ]
+}
