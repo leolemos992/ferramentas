@@ -12,17 +12,16 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { X, CheckCircle, AlertCircle, UploadCloud, FileCheck, Trash2, Loader2, Wrench, ChevronDown, Download, FileText } from "lucide-react";
+import { X, CheckCircle, AlertCircle, UploadCloud, FileCheck, Trash2, Loader2, Wrench, ChevronDown, Download, FileText, Group, Edit, Save } from "lucide-react";
 import { Label } from "./ui/label";
 import { cn } from "@/lib/utils";
 import { Badge } from "./ui/badge";
 import { ScrollArea } from "./ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
-import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "./ui/alert-dialog";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "./ui/accordion";
 
 
 type FieldRule = {
@@ -77,7 +76,7 @@ const validationRules: ValidationRules = {
       { name: "ECF Marca", type: "C", maxLength: 20, required: false },
       { name: "IP", type: "C", maxLength: 20, required: false },
       { name: "Cartão fidelidade", type: "C", maxLength: 20, required: false },
-      { name: "Cartão fidelidade lido", type: "N", maxLength: 1, required: false },
+      { name: "Cartão fidelidade lido", type_name: "N", maxLength: 1, required: false },
       { name: "Cliente", type: "C", maxLength: 14, required: false },
       { name: "CPFCNPJ consumidor", type: "C", maxLength: 18, required: false },
       { name: "Nome consumidor", type: "C", maxLength: 40, required: false },
@@ -517,15 +516,15 @@ const validationRules: ValidationRules = {
 
 type LineResult = {
   lineNumber: number;
-  lineContent: string;
+  originalLineContent: string;
+  currentLineContent: string;
   recordType?: string;
   errors: { message: string; columnIndex: number }[];
 };
 
-type Suggestion = {
-    lineNumber: number;
-    suggestedLine: string;
-}
+type GroupedErrors = {
+  [key: string]: LineResult[];
+};
 
 const recordTypeNames: { [key: string]: string } = {
     OP: "Operação",
@@ -551,11 +550,17 @@ const recordTypeNames: { [key: string]: string } = {
     CP: "Cond. Pagamento",
 };
 
+function InvalidLineItem({ result, onUpdateLine }: { result: LineResult; onUpdateLine: (lineNumber: number, newContent: string) => void; }) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedContent, setEditedContent] = useState(result.currentLineContent);
 
-function InvalidLinesList({ invalidLines }: { invalidLines: LineResult[] }) {
-
-  const getHighlightedLine = (result: LineResult) => {
-    const fields = result.lineContent.split(';');
+  const handleSave = () => {
+    onUpdateLine(result.lineNumber, editedContent);
+    setIsEditing(false);
+  };
+  
+  const getHighlightedLine = (lineContent: string) => {
+    const fields = lineContent.split(';');
     const errorColumns = result.errors.map(e => e.columnIndex);
   
     return (
@@ -571,44 +576,88 @@ function InvalidLinesList({ invalidLines }: { invalidLines: LineResult[] }) {
   };
 
   return (
-      <ScrollArea className="h-96 w-full rounded-md border">
-          <div className="p-4">
-              {invalidLines.map((result) => {
-                  return (
-                      <div
-                          key={result.lineNumber}
-                          className="p-3 border-b mb-2 bg-secondary/30 rounded-lg"
-                      >
-                          <div className="flex items-start justify-between gap-4">
-                             <div className="flex-1">
-                                  <div className="flex items-center gap-2 mb-1">
-                                      <div className="font-semibold text-sm">Linha {result.lineNumber}:</div>
-                                      <Badge variant="destructive">{result.recordType || 'N/A'}</Badge>
-                                  </div>
-                                   <div className="mt-1 p-2 bg-secondary/50 rounded-md border text-xs font-mono">
-                                      {getHighlightedLine(result)}
-                                  </div>
-                             </div>
-                          </div>
-                          <div className="mt-2 pl-1">
-                              <h4 className="font-semibold text-sm mb-1 text-red-800">Erros Encontrados:</h4>
-                              <ul className="space-y-1 list-disc pl-5">
-                                  {result.errors.map((error, index) => {
-                                      const fieldRule = result.recordType ? validationRules[result.recordType]?.fields[error.columnIndex] : null;
-                                      const fieldName = fieldRule ? fieldRule.name : 'Geral';
-                                      return (
-                                          <li key={index} className="text-red-700 text-xs font-sans">
-                                              <b>{fieldName} (Campo {error.columnIndex + 1}):</b> {error.message}
-                                          </li>
-                                      )
-                                  })}
-                              </ul>
-                          </div>
-                      </div>
-                  );
-              })}
+    <div className="p-3 border-b mb-2 bg-secondary/30 rounded-lg">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-1">
+            <div className="font-semibold text-sm">Linha {result.lineNumber}:</div>
+            <Badge variant="destructive">{result.recordType || 'N/A'}</Badge>
           </div>
-      </ScrollArea>
+          {isEditing ? (
+            <div className="mt-2 space-y-2">
+                <Input 
+                    value={editedContent}
+                    onChange={(e) => setEditedContent(e.target.value)}
+                    className="font-mono text-xs h-8"
+                />
+                <div className="flex gap-2">
+                    <Button size="sm" onClick={handleSave}><Save className="mr-2 h-4 w-4"/> Salvar</Button>
+                    <Button size="sm" variant="ghost" onClick={() => setIsEditing(false)}>Cancelar</Button>
+                </div>
+            </div>
+          ) : (
+            <div className="mt-1 p-2 bg-secondary/50 rounded-md border text-xs font-mono">
+                {getHighlightedLine(result.currentLineContent)}
+            </div>
+          )}
+        </div>
+        {!isEditing && (
+            <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => { setEditedContent(result.currentLineContent); setIsEditing(true);}}>
+                <Edit className="h-4 w-4" />
+            </Button>
+        )}
+      </div>
+      <div className="mt-2 pl-1">
+        <h4 className="font-semibold text-sm mb-1 text-red-800">Erros Encontrados:</h4>
+        <ul className="space-y-1 list-disc pl-5">
+          {result.errors.map((error, index) => {
+            const fieldRule = result.recordType ? validationRules[result.recordType]?.fields[error.columnIndex] : null;
+            const fieldName = fieldRule ? fieldRule.name : 'Geral';
+            return (
+              <li key={index} className="text-red-700 text-xs font-sans">
+                <b>{fieldName} (Campo {error.columnIndex + 1}):</b> {error.message}
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+    </div>
+  );
+}
+
+
+function InvalidLinesList({ invalidLines, onUpdateLine }: { invalidLines: LineResult[], onUpdateLine: (lineNumber: number, newContent: string) => void; }) {
+  const groupedErrors = useMemo<GroupedErrors>(() => {
+    return invalidLines.reduce((acc, result) => {
+      const mainErrorMessage = result.errors[0]?.message || 'Erro desconhecido';
+      if (!acc[mainErrorMessage]) {
+        acc[mainErrorMessage] = [];
+      }
+      acc[mainErrorMessage].push(result);
+      return acc;
+    }, {} as GroupedErrors);
+  }, [invalidLines]);
+
+  return (
+    <ScrollArea className="h-96 w-full rounded-md border">
+      <Accordion type="multiple" className="p-4">
+        {Object.entries(groupedErrors).map(([errorMessage, lines]) => (
+          <AccordionItem value={errorMessage} key={errorMessage}>
+            <AccordionTrigger className="text-sm hover:no-underline">
+                <div className="flex items-center gap-2 text-left">
+                    <AlertCircle className="h-4 w-4 text-red-600 shrink-0"/>
+                    <span>{errorMessage} <Badge variant="destructive">{lines.length} ocorrência(s)</Badge></span>
+                </div>
+            </AccordionTrigger>
+            <AccordionContent>
+                {lines.map((result) => (
+                  <InvalidLineItem key={result.lineNumber} result={result} onUpdateLine={onUpdateLine} />
+                ))}
+            </AccordionContent>
+          </AccordionItem>
+        ))}
+      </Accordion>
+    </ScrollArea>
   );
 }
 
@@ -617,7 +666,6 @@ export function FileValidator() {
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<LineResult[]>([]);
-  const [fileContent, setFileContent] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const [isDragging, setIsDragging] = useState(false);
@@ -634,7 +682,6 @@ export function FileValidator() {
     if (isTxt || isCsv) {
       setFile(selectedFile);
       setResults([]);
-      setFileContent("");
     } else {
       toast({
         variant: "destructive",
@@ -672,7 +719,6 @@ export function FileValidator() {
   const handleRemoveFile = () => {
     setFile(null);
     setResults([]);
-    setFileContent("");
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -684,7 +730,7 @@ export function FileValidator() {
     const recordType = fields[0]?.trim();
 
     if (!recordType && line.trim() === '') {
-        return { lineNumber, lineContent: line, errors: [] }; // Ignore empty lines
+        return { lineNumber, originalLineContent: line, currentLineContent: line, errors: [] }; // Ignore empty lines
     }
 
     const rule = validationRules[recordType];
@@ -729,14 +775,13 @@ export function FileValidator() {
         });
     }
 
-    return { lineNumber, lineContent: line, recordType, errors: lineErrors };
+    return { lineNumber, originalLineContent: line, currentLineContent: line, recordType, errors: lineErrors };
   };
 
   const handleValidate = () => {
     if (!file) return;
     setLoading(true);
     setResults([]);
-    setFileContent("");
 
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -744,7 +789,6 @@ export function FileValidator() {
       const decoder = new TextDecoder('utf-8');
       const content = decoder.decode(buffer);
 
-      setFileContent(content);
       const lines = content.split(/\r?\n/);
       const validationResults = lines.map((line, index) => validateLine(line, index + 1));
       
@@ -770,15 +814,28 @@ export function FileValidator() {
     reader.readAsArrayBuffer(file);
   };
   
+  const handleManualLineUpdate = (lineNumber: number, newContent: string) => {
+    setResults(prevResults => {
+        return prevResults.map(res => {
+            if (res.lineNumber === lineNumber) {
+                // Re-validate the manually corrected line to update its error state
+                const newValidation = validateLine(newContent, lineNumber);
+                return { ...newValidation, currentLineContent: newContent, originalLineContent: res.originalLineContent };
+            }
+            return res;
+        });
+    });
+  };
+
   const correctLine = (lineResult: LineResult): string => {
-    if (lineResult.errors.length === 0) return lineResult.lineContent;
+    if (lineResult.errors.length === 0) return lineResult.currentLineContent;
     
     const { recordType } = lineResult;
     const rule = recordType ? validationRules[recordType] : undefined;
 
-    if (!rule) return lineResult.lineContent; // Cannot correct without rules
+    if (!rule) return lineResult.currentLineContent; // Cannot correct without rules
 
-    let fields = lineResult.lineContent.split(';');
+    let fields = lineResult.currentLineContent.split(';');
 
     // Rule 1: Field count
     if (fields.length < rule.fieldCount) {
@@ -832,35 +889,34 @@ export function FileValidator() {
     setIsConfirmingCorrection(true);
   };
   
-  const handleProceedWithCorrection = () => {
-    if (invalidLines.length === 0) {
-        toast({ title: "Nenhum erro a corrigir", description: "O arquivo já está válido." });
+  const handleProceedWithCorrection = (isAuto: boolean) => {
+    if (results.length === 0) {
+        toast({ title: "Nenhum resultado para processar", description: "Valide um arquivo primeiro." });
         setIsConfirmingCorrection(false);
         return;
     }
-
-    const originalLines = fileContent.split(/\r?\n/);
-    const correctedLines = originalLines.map((line, index) => {
-        const lineResult = results.find(r => r.lineNumber === index + 1);
-        if (lineResult && lineResult.errors.length > 0) {
-            return correctLine(lineResult);
+  
+    const correctedLines = results.map(result => {
+        if (isAuto) {
+           return result.errors.length > 0 ? correctLine(result) : result.currentLineContent;
         }
-        return line;
+        // For manual correction, just use the current state of the line
+        return result.currentLineContent;
     });
-
+  
     const correctedContent = correctedLines.join('\n');
     const blob = new Blob([correctedContent], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
     const originalFileName = file?.name.replace(/\.[^/.]+$/, "") || "arquivo";
-    a.download = `${originalFileName}_corrigido.txt`;
+    a.download = `${originalFileName}_corrigido${isAuto ? '_auto' : '_manual'}.txt`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     
-    toast({ title: "Arquivo Corrigido", description: "O download do arquivo corrigido foi iniciado." });
+    toast({ title: "Arquivo Corrigido", description: `O download do arquivo corrigido (${isAuto ? 'automático' : 'manual'}) foi iniciado.` });
     setIsConfirmingCorrection(false);
   };
 
@@ -887,7 +943,7 @@ export function FileValidator() {
       body: [
         line.lineNumber,
         line.recordType || 'N/A',
-        line.lineContent,
+        line.currentLineContent,
         line.errors.map(e => {
           const fieldName = line.recordType && e.columnIndex >= 0 ? validationRules[line.recordType]?.fields[e.columnIndex]?.name : 'Geral';
           return `${fieldName} (Campo ${e.columnIndex + 1}): ${e.message}`;
@@ -918,7 +974,7 @@ export function FileValidator() {
         if (data.column.index === 2 && data.row.section === 'body') {
           const lineResult = invalidLines[data.row.index];
           if (!lineResult) return;
-          const fields = lineResult.lineContent.split(';');
+          const fields = lineResult.currentLineContent.split(';');
           const errorColumns = lineResult.errors.map(e => e.columnIndex);
           const cell = data.cell;
           
@@ -959,14 +1015,25 @@ export function FileValidator() {
   }
 
 
-  const { validLines, invalidLines } = useMemo(() => {
-    const validLines = results.filter(r => r.lineContent.trim() !== '' && r.errors.length === 0);
-    const invalidLines = results.filter(r => r.errors.length > 0);
-    return { validLines, invalidLines };
+  const { validLines, invalidLines, fileContent } = useMemo(() => {
+    const validLines: LineResult[] = [];
+    const invalidLines: LineResult[] = [];
+    let fileContent = "";
+
+    results.forEach(r => {
+        fileContent += r.originalLineContent + '\n';
+        if (r.errors.length > 0) {
+            invalidLines.push(r);
+        } else if (r.originalLineContent.trim() !== '') {
+            validLines.push(r);
+        }
+    });
+
+    return { validLines, invalidLines, fileContent };
   }, [results]);
 
   const stats = useMemo(() => {
-    const totalLines = results.filter(r => r.lineContent.trim() !== '').length;
+    const totalLines = results.filter(r => r.originalLineContent.trim() !== '').length;
     const recordTypes = [...new Set(results.map(r => r.recordType).filter(Boolean))];
     const recordTypeNamesFound = recordTypes.map(rt => recordTypeNames[rt!] || rt).join(', ');
 
@@ -1060,7 +1127,7 @@ export function FileValidator() {
                     </Button>
                      <Button
                         onClick={handleConfirmCorrection}
-                        disabled={invalidLines.length === 0 || loading}
+                        disabled={results.length === 0 || loading}
                         className="w-full text-lg py-6"
                         variant="outline"
                     >
@@ -1113,7 +1180,7 @@ export function FileValidator() {
                                 <CardTitle className="text-sm font-medium">Linhas com Erro</CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <div className="text-3xl font-bold text-red-600 flex items-center">{stats.invalidLines} <AlertCircle className="ml-2 h-6 w-6"/></div>
+                                <div className="text-3xl font-bold text-red-600 flex items-center">{stats.invalidLines.length} <AlertCircle className="ml-2 h-6 w-6"/></div>
                             </CardContent>
                         </Card>
                         <Card>
@@ -1130,7 +1197,7 @@ export function FileValidator() {
                         <TabsList className="grid w-full grid-cols-3">
                             <TabsTrigger value="errors">Linhas com Erro ({invalidLines.length})</TabsTrigger>
                             <TabsTrigger value="valid">Linhas Válidas ({validLines.length})</TabsTrigger>
-                            <TabsTrigger value="file">Arquivo</TabsTrigger>
+                            <TabsTrigger value="file">Arquivo Original</TabsTrigger>
                         </TabsList>
                         <TabsContent value="errors" className="mt-4">
                             {invalidLines.length === 0 ? (
@@ -1142,6 +1209,7 @@ export function FileValidator() {
                             ) : (
                                 <InvalidLinesList 
                                     invalidLines={invalidLines}
+                                    onUpdateLine={handleManualLineUpdate}
                                 />
                             )}
                         </TabsContent>
@@ -1160,7 +1228,7 @@ export function FileValidator() {
                                             <CheckCircle className="h-5 w-5 text-green-600 shrink-0" />
                                             <div>Linha {result.lineNumber}: <Badge variant="secondary">{result.recordType || 'N/A'}</Badge></div>
                                         </div>
-                                        <div className="font-mono text-xs whitespace-pre-wrap break-all truncate mt-1 ml-9 text-muted-foreground">{result.lineContent}</div>
+                                        <div className="font-mono text-xs whitespace-pre-wrap break-all truncate mt-1 ml-9 text-muted-foreground">{result.currentLineContent}</div>
                                     </div>
                                 ))}
                                 </div>
@@ -1178,34 +1246,28 @@ export function FileValidator() {
         <AlertDialog open={isConfirmingCorrection} onOpenChange={setIsConfirmingCorrection}>
             <AlertDialogContent>
                 <AlertDialogHeader>
-                    <AlertDialogTitle>Confirmar Correção e Download</AlertDialogTitle>
-                    <div className="text-sm text-muted-foreground">
-                        <p>{`Você está prestes a corrigir um arquivo com ${invalidLines.length} linha(s) com erro. A ferramenta tentará aplicar as seguintes correções:`}</p>
-                        <ul className="list-disc pl-5 mt-2">
-                            <li>Ajustará o número de campos (colunas) para o esperado.</li>
-                            <li>Removerá caracteres excedentes em campos com tamanho máximo.</li>
-                            <li>Corrigirá a formatação de campos numéricos (casas decimais).</li>
-                            <li>Preencherá campos obrigatórios vazios com valores padrão.</li>
-                        </ul>
-                        <p className="mt-2">Um novo arquivo chamado <code className="bg-muted px-1 py-0.5 rounded text-foreground">{`${file?.name.replace(/\.[^/.]+$/, "") || "arquivo"}_corrigido.txt`}</code> será baixado. Deseja continuar?</p>
-                    </div>
+                    <AlertDialogTitle>Corrigir e Baixar Arquivo</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        Escolha como você deseja gerar o arquivo corrigido:
+                    </AlertDialogDescription>
                 </AlertDialogHeader>
+                <div className="grid gap-4 py-4">
+                    <Button variant="default" onClick={() => handleProceedWithCorrection(false)}>
+                        <Download className="mr-2 h-4 w-4" />
+                        Baixar com Correções Manuais
+                        <p className="font-light ml-2 text-primary-foreground/80">(Usa suas edições)</p>
+                    </Button>
+                    <Button variant="secondary" onClick={() => handleProceedWithCorrection(true)}>
+                        <Wrench className="mr-2 h-4 w-4" />
+                        Baixar com Correção Automática
+                         <p className="font-light ml-2 text-secondary-foreground/80">(A ferramenta tenta corrigir)</p>
+                    </Button>
+                </div>
                 <AlertDialogFooter>
-                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                <AlertDialogAction onClick={handleProceedWithCorrection}>
-                    <Download className="mr-2 h-4 w-4" />
-                    Continuar e Baixar
-                </AlertDialogAction>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
     </div>
   );
 }
-
-    
-    
-
-    
-
-    
