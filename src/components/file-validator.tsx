@@ -592,7 +592,7 @@ function InvalidLineItem({ result, onUpdateLine }: { result: LineResult; onUpdat
       >
         {fields.map((field, index) => {
           let isError = errorColumns.includes(index);
-          if (!isError && isFieldCountError && expectedFieldCount && recordType !== 'XL' && index >= expectedFieldCount) {
+          if (!isError && isFieldCountError && expectedFieldCount && result.recordType !== 'XL' && index >= expectedFieldCount) {
             isError = true;
           }
           return (
@@ -1102,7 +1102,7 @@ export function FileValidator() {
         invalidLines: invalidLines.length,
         recordTypes: recordTypeNamesFound || 'Nenhum'
     };
-  }, [results, validLines.length, invalidLines.length]);
+  }, [results, validLines, invalidLines]);
 
 
   if (!file && !loading) {
@@ -1356,3 +1356,4 @@ export function FileValidator() {
   );
 }
 
+    
