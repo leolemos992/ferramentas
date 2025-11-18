@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BookText, FileCheck2, GitCompareArrows } from "lucide-react";
+import { BookText, FileCheck2 } from "lucide-react";
 import Link from "next/link";
 
 export default function Home() {
@@ -13,7 +13,7 @@ export default function Home() {
           Selecione uma das ferramentas abaixo para começar.
         </p>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full max-w-6xl">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-4xl">
         <Link href="/dictionary" className="group">
           <Card className="h-full hover:border-primary transition-colors duration-300 hover:shadow-lg">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -40,21 +40,6 @@ export default function Home() {
             <CardContent>
               <p className="text-muted-foreground">
                 Valide a estrutura de arquivos de importação (.txt ou .csv).
-              </p>
-            </CardContent>
-          </Card>
-        </Link>
-        <Link href="/dictionary-comparison" className="group">
-          <Card className="h-full hover:border-primary transition-colors duration-300 hover:shadow-lg">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-xl font-bold">
-                Comparador de Dicionários
-              </CardTitle>
-              <GitCompareArrows className="h-6 w-6 text-primary" />
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">
-                Compare duas versões do dicionário de dados.
               </p>
             </CardContent>
           </Card>
