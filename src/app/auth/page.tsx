@@ -9,15 +9,21 @@ import { useToast } from "@/hooks/use-toast";
 import { Label } from "@/components/ui/label";
 import { KeyRound, LogIn } from "lucide-react";
 
-function generateDailyPassword(): string {
+async function generateDailyPassword(): Promise<string> {
   const date = new Date();
   const day = date.getDate();
   const month = date.getMonth() + 1; // Month is 0-indexed
   const year = date.getFullYear() % 100; // Get last two digits of the year
   
-  const password = day * month * year * 3;
+  const secretSeed = (day * month * year * 3).toString();
+
+  const encoder = new TextEncoder();
+  const data = encoder.encode(secretSeed);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
   
-  return password.toString();
+  return hashHex.slice(0, 8);
 }
 
 
@@ -31,7 +37,7 @@ export default function AuthPage() {
     e.preventDefault();
     setLoading(true);
 
-    const correctPassword = generateDailyPassword();
+    const correctPassword = await generateDailyPassword();
 
     if (password === correctPassword) {
       try {
