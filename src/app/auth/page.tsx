@@ -7,7 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Label } from "@/components/ui/label";
-import { KeyRound, LogIn } from "lucide-react";
+import { KeyRound, LogIn, ArrowLeft } from "lucide-react";
+import Link from "next/link";
+import { Toaster } from "@/components/ui/toaster";
 
 async function generateDailyPassword(): Promise<string> {
   const date = new Date();
@@ -23,7 +25,6 @@ async function generateDailyPassword(): Promise<string> {
   
   return technicalPassword + combination;
 }
-
 
 export default function AuthPage() {
   const [password, setPassword] = useState("");
@@ -61,44 +62,54 @@ export default function AuthPage() {
       toast({
         variant: "destructive",
         title: "Acesso Negado",
-        description: "A senha está incorreta.",
+        description: "Senha Incorreta.",
       });
       setLoading(false);
     }
   };
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-muted/40 p-4">
-      <Card className="w-full max-w-sm">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold flex items-center justify-center gap-2">
-            <KeyRound className="h-6 w-6" />
-            Acesso Restrito
-          </CardTitle>
-          <CardDescription>
-            Digite a senha diária para acessar o Comparador de Dicionários.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="password">Senha Técnica Diária</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                placeholder="********"
-              />
-            </div>
-            <Button type="submit" className="w-full" disabled={loading || !correctPassword}>
-                <LogIn className="mr-2 h-4 w-4" />
-              {loading ? "Verificando..." : "Entrar"}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
-    </main>
+    <>
+      <main className="flex min-h-screen flex-col items-center justify-center bg-muted/40 p-4">
+        <div className="w-full max-w-sm">
+            <Link href="/" className="mb-4 inline-block">
+              <Button variant="outline">
+                <ArrowLeft className="mr-2 h-4 w-4" /> Voltar para o início
+              </Button>
+            </Link>
+          <Card>
+            <CardHeader className="text-center">
+              <CardTitle className="text-2xl font-bold flex items-center justify-center gap-2">
+                <KeyRound className="h-6 w-6" />
+                Acesso Restrito
+              </CardTitle>
+              <CardDescription>
+                Digite a senha diária para acessar o Comparador de Dicionários.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleLogin} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="password">Senha Técnica Diária</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    placeholder="********"
+                  />
+                </div>
+                <Button type="submit" className="w-full" disabled={loading || !correctPassword}>
+                    <LogIn className="mr-2 h-4 w-4" />
+                  {loading ? "Verificando..." : "Entrar"}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+      </main>
+      <Toaster />
+    </>
   );
 }
