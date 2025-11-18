@@ -514,17 +514,26 @@ const validationRules: ValidationRules = {
   },
 };
 
+type LineError = { message: string; columnIndex: number; isFieldCountError?: boolean };
+
 type LineResult = {
   lineNumber: number;
   originalLineContent: string;
   currentLineContent: string;
   recordType?: string;
-  errors: { message: string; columnIndex: number; isFieldCountError?: boolean }[];
+  errors: LineError[];
+};
+
+type ErrorOccurrence = {
+    line: LineResult;
+    field?: FieldRule;
+    error: LineError;
 };
 
 type GroupedErrors = {
-  [key: string]: LineResult[];
+    [key: string]: ErrorOccurrence[];
 };
+
 
 const recordTypeNames: { [key: string]: string } = {
     OP: "Operação",
@@ -620,7 +629,7 @@ function InvalidLineItem({ result, onUpdateLine }: { result: LineResult; onUpdat
         )}
       </div>
       <div className="mt-2 pl-1">
-        <h4 className="font-semibold text-sm mb-1 text-red-800">Erros Encontrados:</h4>
+        <h4 className="font-semibold text-sm mb-1 text-red-800">Erros Encontrados na Linha:</h4>
         <ul className="space-y-1 list-disc pl-5">
           {result.errors.map((error, index) => {
             const fieldRule = result.recordType && error.columnIndex >= 0 ? validationRules[result.recordType]?.fields[error.columnIndex] : null;
@@ -640,34 +649,39 @@ function InvalidLineItem({ result, onUpdateLine }: { result: LineResult; onUpdat
 
 function InvalidLinesList({ invalidLines, onUpdateLine }: { invalidLines: LineResult[], onUpdateLine: (lineNumber: number, newContent: string) => void; }) {
   const groupedErrors = useMemo<GroupedErrors>(() => {
-    return invalidLines.reduce((acc, result) => {
-      const firstError = result.errors[0];
-      if (!firstError) return acc;
+    const allErrors: ErrorOccurrence[] = [];
+    invalidLines.forEach(line => {
+        line.errors.forEach(error => {
+            const rule = line.recordType ? validationRules[line.recordType] : undefined;
+            const field = rule && error.columnIndex >= 0 ? rule.fields[error.columnIndex] : undefined;
+            allErrors.push({ line, field, error });
+        });
+    });
 
-      const mainErrorMessage = firstError.message.split(' Sugestão:')[0] || 'Erro desconhecido';
-      
-      if (!acc[mainErrorMessage]) {
-        acc[mainErrorMessage] = [];
-      }
-      acc[mainErrorMessage].push(result);
-      return acc;
+    return allErrors.reduce((acc, occurrence) => {
+        const mainErrorMessage = occurrence.error.message.split(' Sugestão:')[0] || 'Erro desconhecido';
+        if (!acc[mainErrorMessage]) {
+            acc[mainErrorMessage] = [];
+        }
+        acc[mainErrorMessage].push(occurrence);
+        return acc;
     }, {} as GroupedErrors);
   }, [invalidLines]);
 
   return (
     <ScrollArea className="h-96 w-full rounded-md border">
       <Accordion type="multiple" className="p-4">
-        {Object.entries(groupedErrors).map(([errorMessage, lines]) => (
+        {Object.entries(groupedErrors).map(([errorMessage, occurrences]) => (
           <AccordionItem value={errorMessage} key={errorMessage}>
             <AccordionTrigger className="text-sm hover:no-underline">
                 <div className="flex items-center gap-2 text-left">
                     <AlertCircle className="h-4 w-4 text-red-600 shrink-0"/>
-                    <span>{errorMessage} <Badge variant="destructive">{lines.length} ocorrência(s)</Badge></span>
+                    <span>{errorMessage} <Badge variant="destructive">{occurrences.length} ocorrência(s)</Badge></span>
                 </div>
             </AccordionTrigger>
             <AccordionContent>
-                {lines.map((result) => (
-                  <InvalidLineItem key={result.lineNumber} result={result} onUpdateLine={onUpdateLine} />
+                {occurrences.map(({ line }, index) => (
+                  <InvalidLineItem key={`${line.lineNumber}-${index}`} result={line} onUpdateLine={onUpdateLine} />
                 ))}
             </AccordionContent>
           </AccordionItem>
@@ -1042,18 +1056,13 @@ export function FileValidator() {
 
 
   const { validLines, invalidLines, fileContent } = useMemo(() => {
-    const valid: LineResult[] = [];
-    const invalid: LineResult[] = [];
     let content = "";
+    const valid = results.filter(r => r.originalLineContent.trim() !== '' && r.errors.length === 0);
+    const invalid = results.filter(r => r.errors.length > 0);
 
     results.forEach(r => {
         if (r.originalLineContent) {
           content += r.originalLineContent + '\n';
-        }
-        if (r.errors.length > 0) {
-            invalid.push(r);
-        } else if (r.originalLineContent.trim() !== '') {
-            valid.push(r);
         }
     });
 
@@ -1302,5 +1311,3 @@ export function FileValidator() {
     </div>
   );
 }
-
-    
