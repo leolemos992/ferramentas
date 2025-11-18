@@ -1,6 +1,16 @@
 {
     "notes": [
         {
+            "version": "0.0.0.3",
+            "date": "2024-08-01",
+            "changes": [
+                "Adicionado sistema de senha diária para acesso ao Comparador de Dicionários.",
+                "Criada ferramenta para gerar a senha diária ('password-generator.html').",
+                "Atualizado fluxo de deploy para GitHub Pages.",
+                "Ajustes de texto na interface."
+            ]
+        },
+        {
             "version": "0.0.0.2",
             "date": "2024-08-01",
             "changes": [
