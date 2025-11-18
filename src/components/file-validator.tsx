@@ -76,7 +76,7 @@ const validationRules: ValidationRules = {
       { name: "ECF Marca", type: "C", maxLength: 20, required: false },
       { name: "IP", type: "C", maxLength: 20, required: false },
       { name: "Cartão fidelidade", type: "C", maxLength: 20, required: false },
-      { name: "Cartão fidelidade lido", type_name: "N", maxLength: 1, required: false },
+      { name: "Cartão fidelidade lido", type: "N", maxLength: 1, required: false },
       { name: "Cliente", type: "C", maxLength: 14, required: false },
       { name: "CPFCNPJ consumidor", type: "C", maxLength: 18, required: false },
       { name: "Nome consumidor", type: "C", maxLength: 40, required: false },
@@ -553,6 +553,7 @@ const recordTypeNames: { [key: string]: string } = {
 function InvalidLineItem({ result, onUpdateLine }: { result: LineResult; onUpdateLine: (lineNumber: number, newContent: string) => void; }) {
   const [isEditing, setIsEditing] = useState(false);
   const editorRef = useRef<HTMLDivElement>(null);
+  const [editedContent, setEditedContent] = useState(result.currentLineContent);
 
   const handleSave = () => {
     if (editorRef.current) {
@@ -570,6 +571,11 @@ function InvalidLineItem({ result, onUpdateLine }: { result: LineResult; onUpdat
         ref={editorRef}
         contentEditable={isEditing}
         suppressContentEditableWarning={true}
+        onBlur={(e) => {
+          if (isEditing) {
+            setEditedContent(e.currentTarget.innerText);
+          }
+        }}
         className={cn(
             "font-mono text-xs whitespace-pre-wrap break-all p-2 rounded-md border",
             isEditing 
@@ -578,7 +584,7 @@ function InvalidLineItem({ result, onUpdateLine }: { result: LineResult; onUpdat
         )}
       >
         {fields.map((field, index) => (
-            <span key={index} className={cn(errorColumns.includes(index) && !isEditing ? "bg-red-200 text-red-900 rounded-sm p-0.5" : "")}>
+            <span key={index} className={cn(errorColumns.includes(index) ? "bg-red-200 text-red-900 rounded-sm p-0.5" : "")}>
               {field}{index < fields.length - 1 && <span className="text-gray-400 mx-px">;</span>}
             </span>
           )
@@ -741,8 +747,8 @@ export function FileValidator() {
     if (!rule) {
         lineErrors.push({ message: `Tipo de registro desconhecido '${recordType}'.`, columnIndex: 0 });
     } else {
-        if (fields.length !== rule.fieldCount) {
-            lineErrors.push({
+        if (recordType !== 'XL' && fields.length !== rule.fieldCount) {
+             lineErrors.push({
                 message: `O registro '${recordType}' deve ter ${rule.fieldCount} campos, mas foram encontrados ${fields.length}.`,
                 columnIndex: -1 // General line error
             });
@@ -1020,20 +1026,20 @@ export function FileValidator() {
 
 
   const { validLines, invalidLines, fileContent } = useMemo(() => {
-    const validLines: LineResult[] = [];
-    const invalidLines: LineResult[] = [];
-    let fileContent = "";
+    const valid: LineResult[] = [];
+    const invalid: LineResult[] = [];
+    let content = "";
 
     results.forEach(r => {
-        fileContent += r.originalLineContent + '\n';
+        content += r.originalLineContent + '\n';
         if (r.errors.length > 0) {
-            invalidLines.push(r);
+            invalid.push(r);
         } else if (r.originalLineContent.trim() !== '') {
-            validLines.push(r);
+            valid.push(r);
         }
     });
 
-    return { validLines, invalidLines, fileContent };
+    return { validLines: valid, invalidLines: invalid, fileContent: content };
   }, [results]);
 
   const stats = useMemo(() => {
@@ -1275,3 +1281,4 @@ export function FileValidator() {
     </div>
   );
 }
+
