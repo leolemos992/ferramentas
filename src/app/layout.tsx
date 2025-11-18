@@ -19,7 +19,7 @@ const Footer = () => {
             <PatchNotes />
         </div>
         <p>
-          &copy; {currentYear} Desenvolvido por{' '}
+          Criado por:{' '}
           <a
             href="https://github.com/leolemos"
             target="_blank"
