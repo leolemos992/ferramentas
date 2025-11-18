@@ -1,11 +1,9 @@
 import type {NextConfig} from 'next';
 
-const isProd = process.env.NODE_ENV === 'production'
-
 const nextConfig: NextConfig = {
-  basePath: isProd ? '/ferramentas' : '',
-  assetPrefix: isProd ? '/ferramentas/' : '',
   output: 'export',
+  // Required for Next.js to run in a non-root path
+  assetPrefix: process.env.NODE_ENV === 'production' ? '/ferramentas' : '',
   typescript: {
     ignoreBuildErrors: true,
   },
