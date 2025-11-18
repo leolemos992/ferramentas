@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BookText, FileCheck2, GitCompareArrows } from "lucide-react";
+import { BookText, FileCheck2, GitCompareArrows, CodeXml } from "lucide-react";
 import Link from "next/link";
 
 export default function Home() {
@@ -13,7 +13,7 @@ export default function Home() {
           Selecione uma das ferramentas abaixo para começar.
         </p>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-4xl">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full max-w-6xl">
         <Link href="/dictionary" className="group">
           <Card className="h-full hover:border-primary transition-colors duration-300 hover:shadow-lg">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -24,7 +24,7 @@ export default function Home() {
             </CardHeader>
             <CardContent>
               <p className="text-muted-foreground">
-                Gerencie e consulte o dicionário de dados.
+                Gerencie e consulte o dicionário de dados a partir de um arquivo HTML.
               </p>
             </CardContent>
           </Card>
@@ -44,7 +44,22 @@ export default function Home() {
             </CardContent>
           </Card>
         </Link>
-        <Link href="/dictionary-comparison" className="group md:col-span-2">
+         <Link href="/xml-analyzer" className="group">
+          <Card className="h-full hover:border-primary transition-colors duration-300 hover:shadow-lg">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-xl font-bold">
+                Analisador de XML
+              </CardTitle>
+              <CodeXml className="h-6 w-6 text-primary" />
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground">
+                Visualize a estrutura de um arquivo XML em formato de árvore.
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href="/dictionary-comparison" className="group md:col-span-3">
           <Card className="h-full hover:border-primary transition-colors duration-300 hover:shadow-lg">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-xl font-bold">
