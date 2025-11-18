@@ -1,7 +1,10 @@
 import type {NextConfig} from 'next';
 
+const isProd = process.env.NODE_ENV === 'production'
+
 const nextConfig: NextConfig = {
-  /* config options here */
+  basePath: isProd ? '/ferramentas' : '',
+  assetPrefix: isProd ? '/ferramentas/' : '',
   output: 'export',
   typescript: {
     ignoreBuildErrors: true,
