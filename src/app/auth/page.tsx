@@ -9,29 +9,45 @@ import { useToast } from "@/hooks/use-toast";
 import { Label } from "@/components/ui/label";
 import { KeyRound, LogIn } from "lucide-react";
 
+async function generateDailyPassword(seed: string): Promise<string> {
+  const date = new Date();
+  const dateString = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
+  const dataToHash = seed + dateString;
+
+  const encoder = new TextEncoder();
+  const data = encoder.encode(dataToHash);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  
+  return hashHex.substring(0, 8);
+}
+
+
 export default function AuthPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
-    // This password is intentionally readable on the client-side.
-    // It's security by obscurity, meant to deter casual users, not attackers.
-    const correctPassword = process.env.NEXT_PUBLIC_COMPARATOR_PASSWORD;
+    const secretSeed = process.env.NEXT_PUBLIC_COMPARATOR_SECRET_SEED;
 
-    if (!correctPassword) {
+    if (!secretSeed) {
       toast({
         variant: "destructive",
         title: "Erro de Configuração",
-        description: "A senha de acesso não foi configurada corretamente.",
+        description: "O segredo de acesso não foi configurado corretamente.",
       });
       setLoading(false);
       return;
     }
+
+    const correctPassword = await generateDailyPassword(secretSeed);
 
     if (password === correctPassword) {
       try {
@@ -64,7 +80,7 @@ export default function AuthPage() {
             Acesso Restrito
           </CardTitle>
           <CardDescription>
-            Digite a senha para acessar o Comparador de Dicionários.
+            Digite a senha diária para acessar o Comparador de Dicionários.
           </CardDescription>
         </CardHeader>
         <CardContent>
