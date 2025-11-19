@@ -237,7 +237,7 @@ const validationRules: ValidationRules = {
         { name: "Tipo", type: "C", maxLength: 20, required: false },
         { name: "Observação", type: "C", maxLength: Infinity, required: false },
         { name: "Cidade", type: "C", maxLength: 100, required: false },
-        { name: "Estado", type: "C", maxLength: 2, required: true },
+        { name: "Estado", type_transform: "C", maxLength: 2, required: true },
         { name: "Contato de entrega", type: "C", maxLength: 50, required: false },
         { name: "CEP de entrega", type: "C", maxLength: 9, required: false },
         { name: "Estado de entrega", type: "C", maxLength: 2, required: false },
@@ -1741,10 +1741,10 @@ export function FileValidator() {
                                     Tabela
                                 </Button>
                             </div>
-                            <ScrollArea className="h-[60vh] w-full rounded-md border font-mono text-sm">
+                            <ScrollArea className="h-[60vh] w-full rounded-md border">
                               {originalFileView === 'raw' ? (
-                                <div className="flex">
-                                  <div className="p-4 text-right bg-muted text-muted-foreground select-none sticky top-0">
+                                <div className="flex font-mono text-sm">
+                                  <div className="p-4 text-right bg-muted text-muted-foreground select-none sticky left-0">
                                     {fileContentLines.map((_, index) => (
                                       <div key={index}>{index + 1}</div>
                                     ))}
@@ -1752,29 +1752,31 @@ export function FileValidator() {
                                   <pre className="p-4 whitespace-pre-wrap flex-1">{fileContent}</pre>
                                 </div>
                               ) : (
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead className="w-16">Linha</TableHead>
-                                            {tableData.headers.map((header, index) => (
-                                                <TableHead key={index}>{header}</TableHead>
+                                <div className="relative overflow-auto">
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead className="w-16 sticky left-0 bg-background">Linha</TableHead>
+                                                {tableData.headers.map((header, index) => (
+                                                    <TableHead key={index}>{header}</TableHead>
+                                                ))}
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {tableData.rows.map((row, rowIndex) => (
+                                            row.length > 1 && (
+                                                    <TableRow key={rowIndex}>
+                                                        <TableCell className="text-muted-foreground sticky left-0 bg-background">{rowIndex + 1}</TableCell>
+                                                        {row.map((cell, cellIndex) => (
+                                                            <TableCell key={cellIndex} className="whitespace-nowrap">{cell}</TableCell>
+                                                        ))}
+                                                        {row.length < tableData.headers.length && Array.from({length: tableData.headers.length - row.length}).map((_, i) => <TableCell key={`empty-${i}`}></TableCell>)}
+                                                    </TableRow>
+                                                )
                                             ))}
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {tableData.rows.map((row, rowIndex) => (
-                                           row.length > 1 && (
-                                                <TableRow key={rowIndex}>
-                                                    <TableCell className="text-muted-foreground">{rowIndex + 1}</TableCell>
-                                                    {row.map((cell, cellIndex) => (
-                                                        <TableCell key={cellIndex}>{cell}</TableCell>
-                                                    ))}
-                                                    {row.length < tableData.headers.length && Array.from({length: tableData.headers.length - row.length}).map((_, i) => <TableCell key={`empty-${i}`}></TableCell>)}
-                                                </TableRow>
-                                            )
-                                        ))}
-                                    </TableBody>
-                                </Table>
+                                        </TableBody>
+                                    </Table>
+                                </div>
                               )}
                             </ScrollArea>
                         </TabsContent>
@@ -1785,3 +1787,5 @@ export function FileValidator() {
     </div>
   );
 }
+
+    
