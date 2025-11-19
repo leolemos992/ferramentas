@@ -794,7 +794,9 @@ function InvalidLineItem({ result, onSelectLine, isSelected }: { result: LineRes
                 {result.isCorrected ? 'Corrigido' : result.recordType || 'Inválido'}
             </Badge>
           </div>
-          <div className="break-words whitespace-pre-wrap font-mono text-xs text-muted-foreground">{result.currentLineContent}</div>
+          <div className="break-words whitespace-nowrap overflow-hidden text-ellipsis font-mono text-xs text-muted-foreground" title={result.currentLineContent}>
+            {result.currentLineContent}
+          </div>
         </div>
       </div>
       {result.errors.length > 0 && !result.isCorrected && (
@@ -1439,6 +1441,52 @@ export function FileValidator() {
 
   const showEditor = activeTab === 'errors' || activeTab === 'corrected';
 
+  const toolbarControls = (
+    <div className="flex justify-between items-center mb-4">
+        <div className="flex items-center gap-1 rounded-md bg-muted p-1">
+            {activeTab === 'errors' &&
+              <>
+                <Button variant={errorView === 'list' ? 'secondary' : 'ghost'} size="sm" onClick={() => setErrorView('list')}>
+                    <List className="mr-2 h-4 w-4"/>
+                    Visão por Linhas
+                </Button>
+                <Button variant={errorView === 'grouped' ? 'secondary' : 'ghost'} size="sm" onClick={() => setErrorView('grouped')}>
+                    <Group className="mr-2 h-4 w-4" />
+                    Agrupar Erros
+                </Button>
+                <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                        <Button variant="outline" size="sm" disabled={invalidLines.length === 0}>
+                            <Sparkles className="mr-2" />
+                            Corrigir Todos
+                        </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>Confirmar Correção Automática em Massa?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                Esta ação tentará corrigir todas as {invalidLines.length} linhas com erro restantes de uma só vez.
+                                A correção automática é um processo de "melhor esforço" e pode não resolver todos os problemas perfeitamente.
+                                <br/><br/>
+                                <strong>É altamente recomendável que você revise as alterações após a conclusão.</strong> Deseja continuar?
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleAutoCorrectAll}>Sim, Corrigir Todos</AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
+              </>
+            }
+        </div>
+        <Button variant="outline" size="sm" onClick={() => setIsEditorCollapsed(c => !c)}>
+            {isEditorCollapsed ? <PanelRightOpen className="mr-2" /> : <PanelRightClose className="mr-2" />}
+            {isEditorCollapsed ? 'Mostrar Editor' : 'Ocultar Editor'}
+        </Button>
+    </div>
+  );
+
   return (
     <div className="w-full max-w-screen-2xl mx-auto space-y-6">
         <Input
@@ -1596,6 +1644,7 @@ export function FileValidator() {
                         <div className={cn("mt-4", showEditor && "grid gap-6 items-start", showEditor && (isEditorCollapsed ? "grid-cols-1" : "md:grid-cols-2"))}>
                           <div className={cn(showEditor && "space-y-4")}>
                             <TabsContent value="errors">
+                                {toolbarControls}
                                 {invalidLines.length === 0 ? (
                                     <div className="flex flex-col items-center justify-center h-96 text-center p-8 border rounded-md">
                                         <CheckCircle className="w-12 h-12 text-green-500 mb-4" />
@@ -1604,45 +1653,6 @@ export function FileValidator() {
                                     </div>
                                 ) : (
                                   <>
-                                    <div className="flex justify-between items-center mb-4">
-                                        <div className="flex items-center gap-1 rounded-md bg-muted p-1">
-                                            <Button variant={errorView === 'list' ? 'secondary' : 'ghost'} size="sm" onClick={() => setErrorView('list')}>
-                                                <List className="mr-2 h-4 w-4"/>
-                                                Visão por Linhas
-                                            </Button>
-                                            <Button variant={errorView === 'grouped' ? 'secondary' : 'ghost'} size="sm" onClick={() => setErrorView('grouped')}>
-                                                <Group className="mr-2 h-4 w-4" />
-                                                Agrupar Erros
-                                            </Button>
-                                            <AlertDialog>
-                                                <AlertDialogTrigger asChild>
-                                                    <Button variant="outline" size="sm" disabled={invalidLines.length === 0}>
-                                                        <Sparkles className="mr-2" />
-                                                        Corrigir Todos
-                                                    </Button>
-                                                </AlertDialogTrigger>
-                                                <AlertDialogContent>
-                                                    <AlertDialogHeader>
-                                                        <AlertDialogTitle>Confirmar Correção Automática em Massa?</AlertDialogTitle>
-                                                        <AlertDialogDescription>
-                                                            Esta ação tentará corrigir todas as {invalidLines.length} linhas com erro restantes de uma só vez.
-                                                            A correção automática é um processo de "melhor esforço" e pode não resolver todos os problemas perfeitamente.
-                                                            <br/><br/>
-                                                            <strong>É altamente recomendável que você revise as alterações após a conclusão.</strong> Deseja continuar?
-                                                        </AlertDialogDescription>
-                                                    </AlertDialogHeader>
-                                                    <AlertDialogFooter>
-                                                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                                        <AlertDialogAction onClick={handleAutoCorrectAll}>Sim, Corrigir Todos</AlertDialogAction>
-                                                    </AlertDialogFooter>
-                                                </AlertDialogContent>
-                                            </AlertDialog>
-                                        </div>
-                                        <Button variant="outline" size="sm" onClick={() => setIsEditorCollapsed(c => !c)}>
-                                            {isEditorCollapsed ? <PanelRightOpen className="mr-2" /> : <PanelRightClose className="mr-2" />}
-                                            {isEditorCollapsed ? 'Mostrar Editor' : 'Ocultar Editor'}
-                                        </Button>
-                                    </div>
                                     {errorView === 'list' ? (
                                         <SimpleLinesList 
                                             lines={invalidLines}
@@ -1660,6 +1670,7 @@ export function FileValidator() {
                                 )}
                             </TabsContent>
                             <TabsContent value="corrected">
+                                {toolbarControls}
                                 <SimpleLinesList 
                                     lines={correctedLines}
                                     onSelectLine={setEditingLine}
@@ -1673,7 +1684,57 @@ export function FileValidator() {
                                     }
                                 />
                             </TabsContent>
-                            <TabsContent value="valid">
+                            </div>
+                          
+                          {showEditor && (
+                            <div className={cn(isEditorCollapsed && "hidden")}>
+                                {editingLine ? (
+                                    <CorrectionEditor 
+                                        result={editingLine}
+                                        onUpdateLine={handleManualLineUpdate}
+                                        onCancel={() => setEditingLine(null)}
+                                    />
+                                ) : (
+                                   <Card className="sticky top-6">
+                                        <CardHeader>
+                                            <CardTitle className="text-lg">Editor</CardTitle>
+                                            <CardDescription>Selecione uma linha para editar ou use a correção em massa.</CardDescription>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <div className="flex flex-col items-center justify-center h-64 text-center border-2 border-dashed rounded-lg p-4">
+                                                <Edit className="w-10 h-10 text-muted-foreground mb-4"/>
+                                                <p className="text-muted-foreground">Clique em uma linha na lista ao lado para editá-la aqui.</p>
+                                                 <AlertDialog>
+                                                    <AlertDialogTrigger asChild>
+                                                        <Button className="mt-4" variant="default" disabled={invalidLines.length === 0}>
+                                                            <Sparkles className="mr-2" />
+                                                            Corrigir Todos Automaticamente
+                                                        </Button>
+                                                    </AlertDialogTrigger>
+                                                    <AlertDialogContent>
+                                                        <AlertDialogHeader>
+                                                            <AlertDialogTitle>Confirmar Correção Automática em Massa?</AlertDialogTitle>
+                                                            <AlertDialogDescription>
+                                                                Esta ação tentará corrigir todas as {invalidLines.length} linhas com erro restantes de uma só vez.
+                                                                A correção automática é um processo de "melhor esforço" e pode não resolver todos os problemas perfeitamente.
+                                                                <br/><br/>
+                                                                <strong>É altamente recomendável que você revise as alterações após a conclusão.</strong> Deseja continuar?
+                                                            </AlertDialogDescription>
+                                                        </AlertDialogHeader>
+                                                        <AlertDialogFooter>
+                                                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                                            <AlertDialogAction onClick={handleAutoCorrectAll}>Sim, Corrigir Todos</AlertDialogAction>
+                                                        </AlertDialogFooter>
+                                                    </AlertDialogContent>
+                                                </AlertDialog>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                )}
+                            </div>
+                          )}
+                          
+                           <TabsContent value="valid">
                                  <ScrollArea className="h-[60vh] w-full rounded-md border">
                                     <div className="p-4 font-mono text-sm">
                                     {validLines.length === 0 ? (
@@ -1707,14 +1768,14 @@ export function FileValidator() {
                                 </div>
                                 <div className="rounded-md border">
                                   {originalFileView === 'raw' ? (
-                                    <div className="relative overflow-hidden">
+                                    <div className="relative">
                                       <div className="max-h-[60vh] overflow-auto">
                                         <Table className="font-mono text-xs">
                                             <TableBody>
                                                 {fileContentLines.map((line, index) => (
                                                     <TableRow key={index} className="hover:bg-muted/30">
                                                         <TableCell className="w-16 p-2 text-right text-muted-foreground select-none border-r">{index + 1}</TableCell>
-                                                        <TableCell className="whitespace-pre-wrap p-2">{line}</TableCell>
+                                                        <TableCell className="whitespace-pre p-2">{line}</TableCell>
                                                     </TableRow>
                                                 ))}
                                             </TableBody>
@@ -1725,9 +1786,9 @@ export function FileValidator() {
                                     <div className="max-h-[60vh] overflow-y-auto">
                                       <div className="overflow-x-auto">
                                         <Table className="font-mono text-xs">
-                                            <TableHeader className="sticky top-0 bg-background z-10">
+                                            <TableHeader className="sticky top-0 bg-card z-10">
                                                 <TableRow>
-                                                    <TableHead className="w-16 sticky left-0 bg-background z-20">Linha</TableHead>
+                                                    <TableHead className="w-16 sticky left-0 bg-card z-20">Linha</TableHead>
                                                     {tableData.headers.map((header, index) => (
                                                         <TableHead key={index} className="border-l">{header}</TableHead>
                                                     ))}
@@ -1737,7 +1798,7 @@ export function FileValidator() {
                                                 {tableData.rows.map((row, rowIndex) => (
                                                 row.length > 1 && (
                                                         <TableRow key={rowIndex}>
-                                                            <TableCell className="text-muted-foreground sticky left-0 bg-background z-10">{rowIndex + 1}</TableCell>
+                                                            <TableCell className="text-muted-foreground sticky left-0 bg-card z-10">{rowIndex + 1}</TableCell>
                                                             {row.map((cell, cellIndex) => (
                                                                 <TableCell key={cellIndex} className="whitespace-nowrap border-l">{cell}</TableCell>
                                                             ))}
@@ -1752,32 +1813,6 @@ export function FileValidator() {
                                   )}
                                 </div>
                             </TabsContent>
-                          </div>
-                          
-                          {showEditor && (
-                            <div className={cn(isEditorCollapsed && "hidden")}>
-                                {editingLine ? (
-                                    <CorrectionEditor 
-                                        result={editingLine}
-                                        onUpdateLine={handleManualLineUpdate}
-                                        onCancel={() => setEditingLine(null)}
-                                    />
-                                ) : (
-                                   <Card className="sticky top-6">
-                                        <CardHeader>
-                                            <CardTitle className="text-lg">Editor</CardTitle>
-                                            <CardDescription>Selecione uma linha para editar ou use a correção em massa.</CardDescription>
-                                        </CardHeader>
-                                        <CardContent>
-                                            <div className="flex flex-col items-center justify-center h-64 text-center border-2 border-dashed rounded-lg p-4">
-                                                <Edit className="w-10 h-10 text-muted-foreground mb-4"/>
-                                                <p className="text-muted-foreground">Clique em uma linha na lista ao lado para editá-la aqui.</p>
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-                                )}
-                            </div>
-                          )}
                         </div>
                     </Tabs>
                 </CardContent>
@@ -1786,5 +1821,7 @@ export function FileValidator() {
     </div>
   );
 }
+
+    
 
     
