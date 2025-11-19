@@ -12,7 +12,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { X, CheckCircle, AlertCircle, UploadCloud, FileCheck, Trash2, Loader2, Wrench, Download, FileText, Edit, Save, List, Group, HelpCircle, PencilLine, Columns2, PanelRightClose, PanelRightOpen } from "lucide-react";
+import { X, CheckCircle, AlertCircle, UploadCloud, FileCheck, Trash2, Loader2, Wrench, Download, FileText, Edit, Save, List, Group, HelpCircle, PencilLine, Columns2, PanelRightClose, PanelRightOpen, Sparkles } from "lucide-react";
 import { Label } from "./ui/label";
 import { cn } from "@/lib/utils";
 import { Badge } from "./ui/badge";
@@ -565,6 +565,7 @@ const recordTypeNames: { [key: string]: string } = {
 
 
 function CorrectionEditor({ result, onUpdateLine, onCancel }: { result: LineResult; onUpdateLine: (lineNumber: number, newContent: string) => void; onCancel: () => void; }) {
+  const { toast } = useToast();
   const [fieldValues, setFieldValues] = useState<string[]>([]);
   const [fieldErrors, setFieldErrors] = useState<{[key: number]: string}>({});
   const [quickEditContent, setQuickEditContent] = useState('');
@@ -608,6 +609,15 @@ function CorrectionEditor({ result, onUpdateLine, onCancel }: { result: LineResu
   
   const handleSaveQuick = () => {
     onUpdateLine(result.lineNumber, quickEditContent);
+  }
+
+  const handleAutoCorrectLine = () => {
+    const correctedContent = correctLine(result);
+    onUpdateLine(result.lineNumber, correctedContent);
+    toast({
+        title: "Correção Automática Aplicada",
+        description: `A linha ${result.lineNumber} foi corrigida automaticamente. Verifique as alterações.`
+    });
   }
 
   const getHighlightedLine = (lineContent: string) => {
@@ -726,6 +736,9 @@ function CorrectionEditor({ result, onUpdateLine, onCancel }: { result: LineResu
                     </ScrollArea>
                     <div className="flex gap-2 mt-4">
                         <Button size="sm" onClick={handleSaveDetailed}><Save className="mr-2 h-4 w-4"/> Salvar Alterações</Button>
+                        <Button size="sm" variant="outline" onClick={handleAutoCorrectLine}>
+                            <Sparkles className="mr-2 h-4 w-4"/> Correção Automática
+                        </Button>
                     </div>
                 </TabsContent>
                 <TabsContent value="quick" className="mt-4">
@@ -745,6 +758,9 @@ function CorrectionEditor({ result, onUpdateLine, onCancel }: { result: LineResu
                         </div>
                         <div className="flex gap-2">
                             <Button size="sm" onClick={handleSaveQuick}><Save className="mr-2 h-4 w-4"/> Salvar Linha</Button>
+                             <Button size="sm" variant="outline" onClick={handleAutoCorrectLine}>
+                                <Sparkles className="mr-2 h-4 w-4"/> Correção Automática
+                            </Button>
                         </div>
                     </div>
                 </TabsContent>
@@ -912,6 +928,63 @@ function SimpleInvalidLinesList({ allLines, onSelectLine, selectedLineNumber }: 
     );
 }
 
+const correctLine = (lineResult: LineResult): string => {
+    if (lineResult.errors.length === 0) return lineResult.currentLineContent;
+    
+    const { recordType } = lineResult;
+    const rule = recordType ? validationRules[recordType] : undefined;
+
+    if (!rule) return lineResult.currentLineContent; // Cannot correct without rules
+
+    let fields = lineResult.currentLineContent.split(';');
+
+    // Rule 1: Field count
+    if (recordType !== 'XL' && fields.length < rule.fieldCount) {
+        fields = [...fields, ...Array(rule.fieldCount - fields.length).fill('')];
+    } else if (recordType !== 'XL' && fields.length > rule.fieldCount) {
+        fields.length = rule.fieldCount;
+    }
+    
+    fields = fields.map((field, index) => {
+        const fieldRule = rule.fields[index];
+        if (!fieldRule) return field;
+
+        let correctedField = field.trim();
+
+        // Rule 2: Required
+        if (fieldRule.required && !correctedField) {
+            if (fieldRule.type === 'N') correctedField = '0';
+        }
+
+        // Rule 3: Type and Length
+        if (correctedField) {
+            if (fieldRule.type === 'N') {
+                let numericValue = correctedField.replace(/[^0-9,-]/g, '').replace(',', '.');
+                const parts = numericValue.split('.');
+                if (parts.length > 2) numericValue = parts[0] + '.' + parts.slice(1).join('');
+                if (numericValue.startsWith('.')) numericValue = '0' + numericValue;
+                if (numericValue.endsWith('.')) numericValue = numericValue.slice(0, -1);
+                
+                if (fieldRule.decimals !== undefined) {
+                    const number = parseFloat(numericValue);
+                    if (!isNaN(number)) {
+                        numericValue = number.toFixed(fieldRule.decimals);
+                    }
+                }
+                correctedField = numericValue.replace('.', ',');
+            }
+
+            // Max Length
+            if (fieldRule.maxLength !== Infinity && correctedField.length > fieldRule.maxLength) {
+                correctedField = correctedField.substring(0, fieldRule.maxLength);
+            }
+        }
+        
+        return correctedField;
+    });
+
+    return fields.join(';');
+}
 
 export function FileValidator() {
   const [file, setFile] = useState<File | null>(null);
@@ -921,7 +994,6 @@ export function FileValidator() {
   const { toast } = useToast();
   const [isDragging, setIsDragging] = useState(false);
   const [activeTab, setActiveTab] = useState("errors");
-  const [isConfirmingCorrection, setIsConfirmingCorrection] = useState(false);
   const [errorView, setErrorView] = useState<ErrorView>('grouped');
   const [editingLine, setEditingLine] = useState<LineResult | null>(null);
   const [isEditorCollapsed, setIsEditorCollapsed] = useState(false);
@@ -1091,7 +1163,7 @@ export function FileValidator() {
                     description: isNowCorrect ? `A linha ${lineNumber} agora é válida.` : `A linha ${lineNumber} foi atualizada, mas ainda contém erros.`,
                     variant: isNowCorrect ? "default" : "destructive",
                 });
-                const updatedLine = { ...newValidation, originalLineContent: res.originalLineContent, isCorrected: isNowCorrect };
+                const updatedLine = { ...newValidation, currentLineContent: newContent, originalLineContent: res.originalLineContent, isCorrected: isNowCorrect };
                 setEditingLine(updatedLine);
                 return updatedLine;
             }
@@ -1100,83 +1172,14 @@ export function FileValidator() {
         return newResults;
     });
   };
-
-  const correctLine = (lineResult: LineResult): string => {
-    if (lineResult.errors.length === 0) return lineResult.currentLineContent;
-    
-    const { recordType } = lineResult;
-    const rule = recordType ? validationRules[recordType] : undefined;
-
-    if (!rule) return lineResult.currentLineContent; // Cannot correct without rules
-
-    let fields = lineResult.currentLineContent.split(';');
-
-    // Rule 1: Field count
-    if (recordType !== 'XL' && fields.length < rule.fieldCount) {
-        fields = [...fields, ...Array(rule.fieldCount - fields.length).fill('')];
-    } else if (recordType !== 'XL' && fields.length > rule.fieldCount) {
-        fields.length = rule.fieldCount;
-    }
-    
-    fields = fields.map((field, index) => {
-        const fieldRule = rule.fields[index];
-        if (!fieldRule) return field;
-
-        let correctedField = field.trim();
-
-        // Rule 2: Required
-        if (fieldRule.required && !correctedField) {
-            if (fieldRule.type === 'N') correctedField = '0';
-        }
-
-        // Rule 3: Type and Length
-        if (correctedField) {
-            if (fieldRule.type === 'N') {
-                let numericValue = correctedField.replace(/[^0-9,-]/g, '').replace(',', '.');
-                const parts = numericValue.split('.');
-                if (parts.length > 2) numericValue = parts[0] + '.' + parts.slice(1).join('');
-                if (numericValue.startsWith('.')) numericValue = '0' + numericValue;
-                if (numericValue.endsWith('.')) numericValue = numericValue.slice(0, -1);
-                
-                if (fieldRule.decimals !== undefined) {
-                    const number = parseFloat(numericValue);
-                    if (!isNaN(number)) {
-                        numericValue = number.toFixed(fieldRule.decimals);
-                    }
-                }
-                correctedField = numericValue.replace('.', ',');
-            }
-
-            // Max Length
-            if (fieldRule.maxLength !== Infinity && correctedField.length > fieldRule.maxLength) {
-                correctedField = correctedField.substring(0, fieldRule.maxLength);
-            }
-        }
-        
-        return correctedField;
-    });
-
-    return fields.join(';');
-  }
   
-  const handleConfirmCorrection = () => {
-    setIsConfirmingCorrection(true);
-  };
-  
-  const handleProceedWithCorrection = (isAuto: boolean) => {
+  const handleDownloadCorrectedFile = () => {
     if (results.length === 0) {
         toast({ title: "Nenhum resultado para processar", description: "Valide um arquivo primeiro." });
-        setIsConfirmingCorrection(false);
         return;
     }
   
-    const correctedLines = results.map(result => {
-        if (isAuto) {
-           return result.errors.length > 0 ? correctLine(result) : result.currentLineContent;
-        }
-        // For manual correction, just use the current state of the line
-        return result.currentLineContent;
-    });
+    const correctedLines = results.map(result => result.currentLineContent);
   
     const correctedContent = correctedLines.join('\n');
     const blob = new Blob([correctedContent], { type: 'text/plain;charset=utf-8' });
@@ -1184,14 +1187,13 @@ export function FileValidator() {
     const a = document.createElement('a');
     a.href = url;
     const originalFileName = file?.name.replace(/\.[^/.]+$/, "") || "arquivo";
-    a.download = `${originalFileName}_corrigido${isAuto ? '_auto' : '_manual'}.txt`;
+    a.download = `${originalFileName}_corrigido.txt`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     
-    toast({ title: "Arquivo Corrigido", description: `O download do arquivo corrigido (${isAuto ? 'automático' : 'manual'}) foi iniciado.` });
-    setIsConfirmingCorrection(false);
+    toast({ title: "Arquivo Baixado", description: `O download do arquivo com as correções atuais foi iniciado.` });
   };
 
   const handleExportPdf = () => {
@@ -1504,12 +1506,12 @@ export function FileValidator() {
                                 Exportar PDF
                             </Button>
                             <Button
-                              onClick={handleConfirmCorrection}
+                              onClick={handleDownloadCorrectedFile}
                               disabled={results.length === 0 || loading}
                               variant="default"
                             >
-                                <Wrench className="mr-2"/>
-                                Corrigir e Baixar
+                                <Download className="mr-2"/>
+                                Baixar Arquivo Corrigido
                             </Button>
                         </div>
                     </div>
@@ -1660,47 +1662,8 @@ export function FileValidator() {
                 </CardContent>
             </Card>
         )}
-        <AlertDialog open={isConfirmingCorrection} onOpenChange={setIsConfirmingCorrection}>
-            <AlertDialogContent>
-                <AlertDialogHeader>
-                    <AlertDialogTitle>Corrigir e Baixar Arquivo</AlertDialogTitle>
-                    <AlertDialogDescription>
-                        Escolha como você deseja gerar o arquivo corrigido. Suas edições manuais serão sempre mantidas.
-                    </AlertDialogDescription>
-                </AlertDialogHeader>
-                <div className="grid gap-4 py-4">
-                    <Button variant="default" className="h-auto" onClick={() => handleProceedWithCorrection(false)}>
-                        <div className="flex items-center">
-                            <Download className="mr-4 h-5 w-5" />
-                            <div className="text-left">
-                                <p className="font-semibold">Baixar com Correções Manuais</p>
-                                <p className="text-xs text-primary-foreground/80">Salva o arquivo apenas com as alterações que você fez manualmente.</p>
-                            </div>
-                        </div>
-                    </Button>
-                    <Button variant="secondary" className="h-auto" onClick={() => handleProceedWithCorrection(true)}>
-                         <div className="flex items-center">
-                            <Wrench className="mr-4 h-5 w-5" />
-                            <div className="text-left">
-                                <p className="font-semibold">Usar Correção Automática</p>
-                                <p className="text-xs text-secondary-foreground/80">A ferramenta tenta corrigir os erros restantes. Use com atenção.</p>
-                            </div>
-                        </div>
-                    </Button>
-                </div>
-                <AlertDialogFooter>
-                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                </AlertDialogFooter>
-            </AlertDialogContent>
-        </AlertDialog>
     </div>
   );
 }
-
-    
-
-    
-
-    
 
     
