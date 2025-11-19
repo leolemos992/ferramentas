@@ -12,7 +12,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { X, CheckCircle, AlertCircle, UploadCloud, FileCheck, Trash2, Loader2, Wrench, Download, FileText, Edit, Save, List, Group, HelpCircle } from "lucide-react";
+import { X, CheckCircle, AlertCircle, UploadCloud, FileCheck, Trash2, Loader2, Wrench, Download, FileText, Edit, Save, List, Group, HelpCircle, PencilLine, Columns2 } from "lucide-react";
 import { Label } from "./ui/label";
 import { cn } from "@/lib/utils";
 import { Badge } from "./ui/badge";
@@ -23,6 +23,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "./ui/accordion";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose, DialogDescription } from "./ui/dialog";
+import { Textarea } from "./ui/textarea";
 
 
 type FieldRule = {
@@ -562,14 +563,17 @@ const recordTypeNames: { [key: string]: string } = {
     CP: "Cond. Pagamento",
 };
 
-function LineEditor({ result, onUpdateLine, onCancel }: { result: LineResult; onUpdateLine: (lineNumber: number, newContent: string) => void; onCancel: () => void; }) {
+
+function CorrectionEditor({ result, onUpdateLine, onCancel }: { result: LineResult; onUpdateLine: (lineNumber: number, newContent: string) => void; onCancel: () => void; }) {
   const [fieldValues, setFieldValues] = useState<string[]>([]);
   const [fieldErrors, setFieldErrors] = useState<{[key: number]: string}>({});
+  const [quickEditContent, setQuickEditContent] = useState('');
 
   const rule = result.recordType ? validationRules[result.recordType] : null;
 
   React.useEffect(() => {
       const initialFields = result.currentLineContent.split(';');
+      setQuickEditContent(result.currentLineContent);
       if (rule) {
           const expectedLength = rule.fieldCount;
           while(initialFields.length < expectedLength) {
@@ -597,45 +601,87 @@ function LineEditor({ result, onUpdateLine, onCancel }: { result: LineResult; on
     setFieldValues(newFieldValues);
   };
   
-  const handleSave = () => {
+  const handleSaveDetailed = () => {
     const newContent = fieldValues.join(';');
     onUpdateLine(result.lineNumber, newContent);
   };
+  
+  const handleSaveQuick = () => {
+    onUpdateLine(result.lineNumber, quickEditContent);
+  }
 
   if (!rule) {
-      return <div className="text-red-500 p-4">Não é possível editar: Regra de validação não encontrada para o tipo '{result.recordType}'.</div>
+      return (
+        <Card className="sticky top-6">
+            <CardHeader>
+                <CardTitle className="text-lg">Editor de Correção</CardTitle>
+                <CardDescription>Selecione uma linha com erro para começar.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <div className="text-destructive p-4 text-center">
+                    Não é possível editar: Regra de validação não encontrada para o tipo '{result.recordType}'.
+                </div>
+            </CardContent>
+        </Card>
+      )
   }
 
   return (
-    <div className="p-4 border bg-background rounded-lg shadow-md my-2">
-      <h4 className="font-semibold mb-4">Editando Linha {result.lineNumber} ({result.recordType})</h4>
-      <ScrollArea className="h-72">
-        <div className="space-y-4 pr-4">
-          {rule.fields.map((fieldRule, index) => (
-            <div key={index} className="space-y-1">
-              <Label htmlFor={`field-${index}`}>{fieldRule.name} <span className="text-xs text-muted-foreground">(Campo {index + 1})</span></Label>
-              <Input 
-                id={`field-${index}`}
-                value={fieldValues[index] || ''}
-                onChange={(e) => handleFieldChange(index, e.target.value)}
-                className={cn(fieldErrors[index] ? "border-red-500 focus-visible:ring-red-500" : "")}
-              />
-              {fieldErrors[index] && <p className="text-xs text-red-600">{fieldErrors[index]}</p>}
-            </div>
-          ))}
-        </div>
-      </ScrollArea>
-      <div className="flex gap-2 mt-4">
-        <Button size="sm" onClick={handleSave}><Save className="mr-2 h-4 w-4"/> Salvar Alterações</Button>
-        <Button size="sm" variant="ghost" onClick={onCancel}>Cancelar</Button>
-      </div>
-    </div>
+    <Card className="sticky top-6">
+        <CardHeader>
+            <CardTitle className="text-lg">Editor de Correção</CardTitle>
+            <CardDescription>Editando Linha <span className="font-bold">{result.lineNumber}</span> ({result.recordType})</CardDescription>
+        </CardHeader>
+        <CardContent>
+            <Tabs defaultValue="detailed">
+                <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="detailed"><Columns2 className="mr-2"/>Edição Detalhada</TabsTrigger>
+                    <TabsTrigger value="quick"><PencilLine className="mr-2"/>Edição Rápida</TabsTrigger>
+                </TabsList>
+                <TabsContent value="detailed" className="mt-4">
+                    <ScrollArea className="h-96">
+                        <div className="space-y-4 pr-4">
+                        {rule.fields.map((fieldRule, index) => (
+                            <div key={index} className="space-y-1">
+                            <Label htmlFor={`field-${index}`}>{fieldRule.name} <span className="text-xs text-muted-foreground">(Campo {index + 1})</span></Label>
+                            <Input 
+                                id={`field-${index}`}
+                                value={fieldValues[index] || ''}
+                                onChange={(e) => handleFieldChange(index, e.target.value)}
+                                className={cn(fieldErrors[index] ? "border-red-500 focus-visible:ring-red-500" : "")}
+                            />
+                            {fieldErrors[index] && <p className="text-xs text-red-600">{fieldErrors[index]}</p>}
+                            </div>
+                        ))}
+                        </div>
+                    </ScrollArea>
+                    <div className="flex gap-2 mt-4">
+                        <Button size="sm" onClick={handleSaveDetailed}><Save className="mr-2 h-4 w-4"/> Salvar Alterações</Button>
+                        <Button size="sm" variant="ghost" onClick={onCancel}>Fechar</Button>
+                    </div>
+                </TabsContent>
+                <TabsContent value="quick" className="mt-4">
+                    <div className="space-y-4">
+                        <Label htmlFor="quick-edit-area">Conteúdo da Linha</Label>
+                        <Textarea 
+                            id="quick-edit-area"
+                            value={quickEditContent}
+                            onChange={(e) => setQuickEditContent(e.target.value)}
+                            className="h-48 font-mono text-xs"
+                        />
+                        <div className="flex gap-2">
+                            <Button size="sm" onClick={handleSaveQuick}><Save className="mr-2 h-4 w-4"/> Salvar Linha</Button>
+                            <Button size="sm" variant="ghost" onClick={onCancel}>Fechar</Button>
+                        </div>
+                    </div>
+                </TabsContent>
+            </Tabs>
+        </CardContent>
+    </Card>
   );
 }
 
-function InvalidLineItem({ result, onUpdateLine }: { result: LineResult; onUpdateLine: (lineNumber: number, newContent: string) => void; }) {
-  const [isEditing, setIsEditing] = useState(false);
-
+function InvalidLineItem({ result, onSelectLine, isSelected }: { result: LineResult; onSelectLine: () => void; isSelected: boolean }) {
   const getHighlightedLine = (lineContent: string) => {
     const fields = lineContent.split(';');
     const errorColumns = result.errors.map(e => e.columnIndex);
@@ -643,7 +689,7 @@ function InvalidLineItem({ result, onUpdateLine }: { result: LineResult; onUpdat
     const rule = result.recordType ? validationRules[result.recordType] : null;
 
     return (
-      <div className="font-mono text-xs whitespace-pre-wrap break-all p-2 rounded-md bg-secondary/50 border">
+      <div className="font-mono text-xs whitespace-pre-wrap break-words p-2 rounded-md bg-secondary/50 border">
         {fields.map((field, index) => {
           let isError = errorColumns.includes(index);
           if (hasFieldCountError && rule && result.recordType !== 'XL' && index >= rule.fieldCount) {
@@ -660,16 +706,16 @@ function InvalidLineItem({ result, onUpdateLine }: { result: LineResult; onUpdat
       </div>
     );
   };
-  
-  if (isEditing) {
-    return <LineEditor result={result} onUpdateLine={(lineNumber, newContent) => { onUpdateLine(lineNumber, newContent); setIsEditing(false); }} onCancel={() => setIsEditing(false)} />;
-  }
 
   return (
-    <div className={cn(
-        "p-3 border-b last:border-b-0 mb-2 rounded-lg transition-colors",
-        result.isCorrected ? "bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700" : "bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700"
-    )}>
+    <div 
+        onClick={onSelectLine}
+        className={cn(
+            "p-3 border-b last:border-b-0 mb-2 rounded-lg transition-colors cursor-pointer",
+            result.isCorrected ? "bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700" : "bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700",
+            isSelected ? 'ring-2 ring-primary ring-offset-2' : 'hover:bg-muted/50'
+        )}
+    >
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-2 flex-wrap">
@@ -678,13 +724,8 @@ function InvalidLineItem({ result, onUpdateLine }: { result: LineResult; onUpdat
                 {result.isCorrected ? 'Corrigido' : result.recordType || 'Inválido'}
             </Badge>
           </div>
-          <div className="break-all">{result.currentLineContent}</div>
+          <div className="break-words whitespace-pre-wrap font-mono text-xs text-muted-foreground">{result.currentLineContent}</div>
         </div>
-        {!result.isCorrected && (
-          <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => setIsEditing(true)}>
-              <Edit className="h-4 w-4" />
-          </Button>
-        )}
       </div>
       {result.errors.length > 0 && !result.isCorrected && (
         <Accordion type="single" collapsible className="w-full mt-2">
@@ -722,7 +763,7 @@ function InvalidLineItem({ result, onUpdateLine }: { result: LineResult; onUpdat
   );
 }
 
-function GroupedInvalidLinesList({ allLines, onUpdateLine }: { allLines: LineResult[], onUpdateLine: (lineNumber: number, newContent: string) => void; }) {
+function GroupedInvalidLinesList({ allLines, onSelectLine, selectedLineNumber }: { allLines: LineResult[], onSelectLine: (line: LineResult) => void; selectedLineNumber: number | null }) {
   const { correctedLines, groupedErrors, stillInvalidLines } = useMemo(() => {
     const corrected = allLines.filter(line => line.isCorrected);
     const invalid = allLines.filter(line => !line.isCorrected);
@@ -762,7 +803,7 @@ function GroupedInvalidLinesList({ allLines, onUpdateLine }: { allLines: LineRes
                 </AccordionTrigger>
                 <AccordionContent>
                     {correctedLines.map((line) => (
-                        <InvalidLineItem key={line.lineNumber} result={line} onUpdateLine={onUpdateLine} />
+                        <InvalidLineItem key={line.lineNumber} result={line} onSelectLine={() => onSelectLine(line)} isSelected={selectedLineNumber === line.lineNumber} />
                     ))}
                 </AccordionContent>
             </AccordionItem>
@@ -777,7 +818,7 @@ function GroupedInvalidLinesList({ allLines, onUpdateLine }: { allLines: LineRes
             </AccordionTrigger>
             <AccordionContent>
                 {occurrences.map(({ line }, index) => (
-                  <InvalidLineItem key={`${line.lineNumber}-${index}`} result={line} onUpdateLine={onUpdateLine} />
+                  <InvalidLineItem key={`${line.lineNumber}-${index}`} result={line} onSelectLine={() => onSelectLine(line)} isSelected={selectedLineNumber === line.lineNumber} />
                 ))}
             </AccordionContent>
           </AccordionItem>
@@ -794,7 +835,7 @@ function GroupedInvalidLinesList({ allLines, onUpdateLine }: { allLines: LineRes
   );
 }
 
-function SimpleInvalidLinesList({ allLines, onUpdateLine }: { allLines: LineResult[], onUpdateLine: (lineNumber: number, newContent: string) => void; }) {
+function SimpleInvalidLinesList({ allLines, onSelectLine, selectedLineNumber }: { allLines: LineResult[], onSelectLine: (line: LineResult) => void, selectedLineNumber: number | null }) {
     const { correctedLines, stillInvalidLines } = useMemo(() => ({
         correctedLines: allLines.filter(l => l.isCorrected),
         stillInvalidLines: allLines.filter(l => !l.isCorrected),
@@ -807,7 +848,7 @@ function SimpleInvalidLinesList({ allLines, onUpdateLine }: { allLines: LineResu
                 <div className="mb-4">
                     <h3 className="mb-2 text-sm font-semibold text-green-700">Linhas Corrigidas ({correctedLines.length})</h3>
                     {correctedLines.map((result) => (
-                        <InvalidLineItem key={result.lineNumber} result={result} onUpdateLine={onUpdateLine} />
+                        <InvalidLineItem key={result.lineNumber} result={result} onSelectLine={() => onSelectLine(result)} isSelected={selectedLineNumber === result.lineNumber} />
                     ))}
                 </div>
             )}
@@ -815,7 +856,7 @@ function SimpleInvalidLinesList({ allLines, onUpdateLine }: { allLines: LineResu
                  <div>
                     <h3 className="mb-2 text-sm font-semibold text-red-700">Linhas com Erro ({stillInvalidLines.length})</h3>
                     {stillInvalidLines.map((result) => (
-                        <InvalidLineItem key={result.lineNumber} result={result} onUpdateLine={onUpdateLine} />
+                        <InvalidLineItem key={result.lineNumber} result={result} onSelectLine={() => onSelectLine(result)} isSelected={selectedLineNumber === result.lineNumber} />
                     ))}
                 </div>
             )}
@@ -835,6 +876,7 @@ export function FileValidator() {
   const [activeTab, setActiveTab] = useState("errors");
   const [isConfirmingCorrection, setIsConfirmingCorrection] = useState(false);
   const [errorView, setErrorView] = useState<ErrorView>('grouped');
+  const [editingLine, setEditingLine] = useState<LineResult | null>(null);
 
 
   const handleFileDrop = (selectedFile: File | undefined) => {
@@ -957,6 +999,7 @@ export function FileValidator() {
     if (!fileToValidate) return;
     setLoading(true);
     setResults([]);
+    setEditingLine(null);
 
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -972,6 +1015,8 @@ export function FileValidator() {
       const invalidCount = validationResults.filter(r => r.errors.length > 0).length;
       if (invalidCount > 0) {
         setActiveTab("errors");
+        const firstError = validationResults.find(r => r.errors.length > 0);
+        if (firstError) setEditingLine(firstError);
       } else {
         setActiveTab("valid");
       }
@@ -991,9 +1036,8 @@ export function FileValidator() {
   
   const handleManualLineUpdate = (lineNumber: number, newContent: string) => {
     setResults(prevResults => {
-        return prevResults.map(res => {
+        const newResults = prevResults.map(res => {
             if (res.lineNumber === lineNumber) {
-                // Re-validate the manually corrected line to update its error state
                 const newValidation = validateLine(newContent, lineNumber);
                 const isNowCorrect = res.errors.length > 0 && newValidation.errors.length === 0;
                 toast({
@@ -1001,10 +1045,13 @@ export function FileValidator() {
                     description: isNowCorrect ? `A linha ${lineNumber} agora é válida.` : `A linha ${lineNumber} foi atualizada, mas ainda contém erros.`,
                     variant: isNowCorrect ? "default" : "destructive",
                 });
-                return { ...newValidation, originalLineContent: res.originalLineContent, isCorrected: isNowCorrect };
+                const updatedLine = { ...newValidation, originalLineContent: res.originalLineContent, isCorrected: isNowCorrect };
+                setEditingLine(updatedLine);
+                return updatedLine;
             }
             return res;
         });
+        return newResults;
     });
   };
 
@@ -1167,14 +1214,13 @@ export function FileValidator() {
   const { validLines, invalidLines, fileContent, allInvalidLines } = useMemo(() => {
     const valid: LineResult[] = [];
     const invalid: LineResult[] = [];
-    const allInvalid: LineResult[] = [];
     let content = "";
     
     results.forEach(r => {
       if (r.originalLineContent.trim() !== '') {
         if (r.errors.length === 0 && !r.isCorrected) {
           valid.push(r);
-        } else {
+        } else if (r.errors.length > 0 || r.isCorrected) {
           invalid.push(r);
         }
       }
@@ -1240,23 +1286,25 @@ export function FileValidator() {
                                     <h3 className="font-semibold text-base mb-2">2. Analisando os Resultados</h3>
                                     <p>Após a validação, a ferramenta exibirá os resultados em abas:</p>
                                     <ul className="list-disc pl-5 mt-2 space-y-1">
-                                        <li><strong>Linhas com Erro:</strong> Lista todas as linhas que não seguem o layout R2D2. Os campos problemáticos são destacados em vermelho.</li>
+                                        <li><strong>Linhas com Erro:</strong> Lista todas as linhas que não seguem o layout R2D2. As linhas corrigidas também aparecerão aqui com um status verde.</li>
                                         <li><strong>Linhas Válidas:</strong> Mostra todas as linhas que foram validadas com sucesso.</li>
                                         <li><strong>Arquivo Original:</strong> Exibe o conteúdo completo do arquivo que você enviou.</li>
                                     </ul>
                                 </section>
                                 <section>
                                     <h3 className="font-semibold text-base mb-2">3. Corrigindo Erros</h3>
-                                    <p>Na aba de erros, você tem duas formas de visualizar e corrigir:</p>
+                                    <p>A tela é dividida em duas: a lista de erros à esquerda e o **Editor de Correção** à direita.</p>
                                     <ul className="list-disc pl-5 mt-2 space-y-1">
-                                        <li><strong>Visão por Linhas:</strong> Mostra cada linha com erro individualmente.</li>
-                                        <li><strong>Agrupar Erros:</strong> Agrupa os erros por tipo (ex: "Campo obrigatório não preenchido"), facilitando a identificação de problemas recorrentes. Expanda um grupo para ver todas as linhas afetadas.</li>
-                                        <li><strong>Edição Manual:</strong> Clique no ícone de <Edit className="inline h-4 w-4" /> para tornar uma linha editável. Corrija o conteúdo e clique em "Salvar". O destaque no campo com erro ajuda a identificar o que precisa ser ajustado.</li>
+                                        <li><strong>Selecionar uma Linha:</strong> Clique em qualquer linha na lista da esquerda para carregá-la no editor à direita.</li>
+                                        <li><strong>Agrupar Erros:</strong> Use a opção "Agrupar Erros" para visualizar os problemas por tipo, facilitando a identificação de padrões.</li>
+                                        <li><strong>Edição Detalhada:</strong> No editor, use a aba "Edição Detalhada" para corrigir cada campo individualmente. Campos com erro são destacados em vermelho.</li>
+                                        <li><strong>Edição Rápida:</strong> Use a aba "Edição Rápida" para editar a linha inteira como um único texto, útil para correções rápidas.</li>
+                                        <li>Ao salvar, a linha na lista será atualizada instantaneamente com seu novo status (corrigida ou ainda com erro).</li>
                                     </ul>
                                 </section>
                                 <section>
                                     <h3 className="font-semibold text-base mb-2">4. Baixando o Arquivo Corrigido</h3>
-                                    <p>Após fazer as edições manuais, clique no botão <strong>"Corrigir e Baixar"</strong>. Você terá duas opções:</p>
+                                    <p>Após fazer as edições, clique no botão <strong>"Corrigir e Baixar"</strong>. Você terá duas opções:</p>
                                      <ul className="list-disc pl-5 mt-2 space-y-1">
                                         <li><strong>Baixar com Correções Manuais:</strong> Gera um novo arquivo contendo apenas as alterações que você fez manualmente.</li>
                                         <li><strong>Usar Correção Automática:</strong> A ferramenta tentará corrigir os erros restantes automaticamente. <strong>Atenção:</strong> Use esta opção com cuidado, pois a correção automática pode não ser perfeita para todos os casos.</li>
@@ -1326,7 +1374,7 @@ export function FileValidator() {
   }
 
   return (
-    <div className="w-full max-w-7xl mx-auto space-y-6">
+    <div className="w-full max-w-screen-2xl mx-auto space-y-6">
         <Input
             id="file-upload-hidden"
             type="file"
@@ -1369,23 +1417,25 @@ export function FileValidator() {
                                             <h3 className="font-semibold text-base mb-2">2. Analisando os Resultados</h3>
                                             <p>Após a validação, a ferramenta exibirá os resultados em abas:</p>
                                             <ul className="list-disc pl-5 mt-2 space-y-1">
-                                                <li><strong>Linhas com Erro:</strong> Lista todas as linhas que não seguem o layout R2D2. Os campos problemáticos são destacados em vermelho.</li>
+                                                <li><strong>Linhas com Erro:</strong> Lista todas as linhas que não seguem o layout R2D2. As linhas corrigidas também aparecerão aqui com um status verde.</li>
                                                 <li><strong>Linhas Válidas:</strong> Mostra todas as linhas que foram validadas com sucesso.</li>
                                                 <li><strong>Arquivo Original:</strong> Exibe o conteúdo completo do arquivo que você enviou.</li>
                                             </ul>
                                         </section>
                                         <section>
                                             <h3 className="font-semibold text-base mb-2">3. Corrigindo Erros</h3>
-                                            <p>Na aba de erros, você tem duas formas de visualizar e corrigir:</p>
+                                            <p>A tela é dividida em duas: a lista de erros à esquerda e o **Editor de Correção** à direita.</p>
                                             <ul className="list-disc pl-5 mt-2 space-y-1">
-                                                <li><strong>Visão por Linhas:</strong> Mostra cada linha com erro individualmente.</li>
-                                                <li><strong>Agrupar Erros:</strong> Agrupa os erros por tipo (ex: "Campo obrigatório não preenchido"), facilitando a identificação de problemas recorrentes. Expanda um grupo para ver todas as linhas afetadas.</li>
-                                                <li><strong>Edição Manual:</strong> Clique no ícone de <Edit className="inline h-4 w-4" /> para abrir um editor de formulário para a linha. Cada campo terá sua própria entrada, e os erros serão exibidos individualmente. Corrija o conteúdo e clique em "Salvar".</li>
+                                                <li><strong>Selecionar uma Linha:</strong> Clique em qualquer linha na lista da esquerda para carregá-la no editor à direita.</li>
+                                                <li><strong>Agrupar Erros:</strong> Use a opção "Agrupar Erros" para visualizar os problemas por tipo, facilitando a identificação de padrões.</li>
+                                                <li><strong>Edição Detalhada:</strong> No editor, use a aba "Edição Detalhada" para corrigir cada campo individualmente. Campos com erro são destacados em vermelho.</li>
+                                                <li><strong>Edição Rápida:</strong> Use a aba "Edição Rápida" para editar a linha inteira como um único texto, útil para correções rápidas.</li>
+                                                <li>Ao salvar, a linha na lista será atualizada instantaneamente com seu novo status (corrigida ou ainda com erro).</li>
                                             </ul>
                                         </section>
                                         <section>
                                             <h3 className="font-semibold text-base mb-2">4. Baixando o Arquivo Corrigido</h3>
-                                            <p>Após fazer as edições manuais, clique no botão <strong>"Corrigir e Baixar"</strong>. Você terá duas opções:</p>
+                                            <p>Após fazer as edições, clique no botão <strong>"Corrigir e Baixar"</strong>. Você terá duas opções:</p>
                                              <ul className="list-disc pl-5 mt-2 space-y-1">
                                                 <li><strong>Baixar com Correções Manuais:</strong> Gera um novo arquivo contendo apenas as alterações que você fez manualmente.</li>
                                                 <li><strong>Usar Correção Automática:</strong> A ferramenta tentará corrigir os erros restantes automaticamente. <strong>Atenção:</strong> Use esta opção com cuidado, pois a correção automática pode não ser perfeita para todos os casos.</li>
@@ -1476,31 +1526,57 @@ export function FileValidator() {
                                     <p className="text-muted-foreground">Todas as linhas foram validadas com sucesso.</p>
                                 </div>
                             ) : (
-                                <div className="space-y-4">
-                                    <div className="flex justify-end">
-                                        <div className="flex items-center gap-1 rounded-md bg-muted p-1">
-                                            <Button variant={errorView === 'list' ? 'secondary' : 'ghost'} size="sm" onClick={() => setErrorView('list')}>
-                                                <List className="mr-2 h-4 w-4"/>
-                                                Visão por Linhas
-                                            </Button>
-                                            <Button variant={errorView === 'grouped' ? 'secondary' : 'ghost'} size="sm" onClick={() => setErrorView('grouped')}>
-                                                <Group className="mr-2 h-4 w-4" />
-                                                Agrupar Erros
-                                            </Button>
+                                <div className="grid md:grid-cols-2 gap-6 items-start">
+                                    <div className="space-y-4">
+                                        <div className="flex justify-end">
+                                            <div className="flex items-center gap-1 rounded-md bg-muted p-1">
+                                                <Button variant={errorView === 'list' ? 'secondary' : 'ghost'} size="sm" onClick={() => setErrorView('list')}>
+                                                    <List className="mr-2 h-4 w-4"/>
+                                                    Visão por Linhas
+                                                </Button>
+                                                <Button variant={errorView === 'grouped' ? 'secondary' : 'ghost'} size="sm" onClick={() => setErrorView('grouped')}>
+                                                    <Group className="mr-2 h-4 w-4" />
+                                                    Agrupar Erros
+                                                </Button>
+                                            </div>
                                         </div>
-                                    </div>
 
-                                    {errorView === 'list' ? (
-                                        <SimpleInvalidLinesList 
-                                            allLines={allInvalidLines}
-                                            onUpdateLine={handleManualLineUpdate}
-                                        />
-                                    ) : (
-                                        <GroupedInvalidLinesList 
-                                            allLines={allInvalidLines}
-                                            onUpdateLine={handleManualLineUpdate}
-                                        />
-                                    )}
+                                        {errorView === 'list' ? (
+                                            <SimpleInvalidLinesList 
+                                                allLines={allInvalidLines}
+                                                onSelectLine={setEditingLine}
+                                                selectedLineNumber={editingLine?.lineNumber ?? null}
+                                            />
+                                        ) : (
+                                            <GroupedInvalidLinesList 
+                                                allLines={allInvalidLines}
+                                                onSelectLine={setEditingLine}
+                                                selectedLineNumber={editingLine?.lineNumber ?? null}
+                                            />
+                                        )}
+                                    </div>
+                                    <div>
+                                        {editingLine ? (
+                                            <CorrectionEditor 
+                                                result={editingLine}
+                                                onUpdateLine={handleManualLineUpdate}
+                                                onCancel={() => setEditingLine(null)}
+                                            />
+                                        ) : (
+                                           <Card className="sticky top-6">
+                                                <CardHeader>
+                                                    <CardTitle className="text-lg">Editor de Correção</CardTitle>
+                                                    <CardDescription>Selecione uma linha com erro para começar.</CardDescription>
+                                                </CardHeader>
+                                                <CardContent>
+                                                    <div className="flex flex-col items-center justify-center h-64 text-center border-2 border-dashed rounded-lg">
+                                                        <Edit className="w-10 h-10 text-muted-foreground mb-4"/>
+                                                        <p className="text-muted-foreground">Clique em uma linha na lista ao lado para editá-la aqui.</p>
+                                                    </div>
+                                                </CardContent>
+                                            </Card>
+                                        )}
+                                    </div>
                                 </div>
                             )}
                         </TabsContent>
@@ -1519,7 +1595,7 @@ export function FileValidator() {
                                             <CheckCircle className="h-5 w-5 text-green-600 shrink-0" />
                                             <div>Linha {result.lineNumber}: <Badge variant="secondary">{result.recordType || 'N/A'}</Badge></div>
                                         </div>
-                                        <div className="font-mono text-xs whitespace-pre-wrap break-all mt-1 ml-9 text-muted-foreground">{result.currentLineContent}</div>
+                                        <div className="font-mono text-xs whitespace-pre-wrap break-words mt-1 ml-9 text-muted-foreground">{result.currentLineContent}</div>
                                     </div>
                                 ))}
                                 </div>
@@ -1570,5 +1646,3 @@ export function FileValidator() {
     </div>
   );
 }
-
-    
