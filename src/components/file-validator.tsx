@@ -773,12 +773,16 @@ function CorrectionEditor({ result, onUpdateLine, onCancel }: { result: LineResu
 }
 
 function InvalidLineItem({ result, onSelectLine, isSelected }: { result: LineResult; onSelectLine: () => void; isSelected: boolean }) {
+  const itemBg = result.isCorrected 
+    ? "bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700" 
+    : "bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700";
+  
   return (
     <div 
         onClick={onSelectLine}
         className={cn(
             "p-3 border-b last:border-b-0 mb-2 rounded-lg transition-colors cursor-pointer",
-            result.isCorrected ? "bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700" : "bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700",
+            itemBg,
             isSelected ? 'ring-2 ring-primary ring-offset-2' : 'hover:bg-muted/50'
         )}
     >
@@ -828,13 +832,10 @@ function InvalidLineItem({ result, onSelectLine, isSelected }: { result: LineRes
   );
 }
 
-function GroupedInvalidLinesList({ allLines, onSelectLine, selectedLineNumber }: { allLines: LineResult[], onSelectLine: (line: LineResult) => void; selectedLineNumber: number | null }) {
-  const { correctedLines, groupedErrors, stillInvalidLines } = useMemo(() => {
-    const corrected = allLines.filter(line => line.isCorrected);
-    const invalid = allLines.filter(line => !line.isCorrected);
-    
+function GroupedInvalidLinesList({ lines, onSelectLine, selectedLineNumber }: { lines: LineResult[], onSelectLine: (line: LineResult) => void; selectedLineNumber: number | null }) {
+  const groupedErrors = useMemo(() => {
     const allErrors: ErrorOccurrence[] = [];
-    invalid.forEach(line => {
+    lines.forEach(line => {
         line.errors.forEach(error => {
             const rule = line.recordType ? validationRules[line.recordType] : undefined;
             const field = rule && error.columnIndex >= 0 ? rule.fields[error.columnIndex] : undefined;
@@ -851,28 +852,13 @@ function GroupedInvalidLinesList({ allLines, onSelectLine, selectedLineNumber }:
         return acc;
     }, {} as GroupedErrors);
     
-    return { correctedLines: corrected, groupedErrors: grouped, stillInvalidLines: invalid };
-  }, [allLines]);
+    return grouped;
+  }, [lines]);
   
 
   return (
     <ScrollArea className="h-[60vh] w-full rounded-md border">
-      <Accordion type="multiple" defaultValue={['corrected-lines']} className="p-4">
-        {correctedLines.length > 0 && (
-            <AccordionItem value="corrected-lines" className="border-green-300 dark:border-green-700">
-                 <AccordionTrigger className="text-sm hover:no-underline text-green-700 dark:text-green-300">
-                    <div className="flex items-center gap-2 text-left">
-                        <CheckCircle className="h-4 w-4 shrink-0"/>
-                        <span>Linhas Corrigidas <Badge className="bg-green-600 hover:bg-green-700">{correctedLines.length}</Badge></span>
-                    </div>
-                </AccordionTrigger>
-                <AccordionContent>
-                    {correctedLines.map((line) => (
-                        <InvalidLineItem key={line.lineNumber} result={line} onSelectLine={() => onSelectLine(line)} isSelected={selectedLineNumber === line.lineNumber} />
-                    ))}
-                </AccordionContent>
-            </AccordionItem>
-        )}
+      <Accordion type="multiple" defaultValue={Object.keys(groupedErrors)} className="p-4">
         {Object.entries(groupedErrors).map(([errorMessage, occurrences]) => (
           <AccordionItem value={errorMessage} key={errorMessage}>
             <AccordionTrigger className="text-sm hover:no-underline">
@@ -888,42 +874,21 @@ function GroupedInvalidLinesList({ allLines, onSelectLine, selectedLineNumber }:
             </AccordionContent>
           </AccordionItem>
         ))}
-         {stillInvalidLines.length === 0 && correctedLines.length > 0 && (
-           <div className="flex flex-col items-center justify-center h-64 text-center p-8">
-              <CheckCircle className="w-12 h-12 text-green-500 mb-4" />
-              <h3 className="text-lg font-semibold">Todos os erros foram corrigidos!</h3>
-              <p className="text-muted-foreground">Você pode prosseguir e baixar o arquivo corrigido.</p>
-          </div>
-        )}
       </Accordion>
     </ScrollArea>
   );
 }
 
-function SimpleInvalidLinesList({ allLines, onSelectLine, selectedLineNumber }: { allLines: LineResult[], onSelectLine: (line: LineResult) => void, selectedLineNumber: number | null }) {
-    const { correctedLines, stillInvalidLines } = useMemo(() => ({
-        correctedLines: allLines.filter(l => l.isCorrected),
-        stillInvalidLines: allLines.filter(l => !l.isCorrected),
-    }), [allLines]);
-    
+function SimpleLinesList({ lines, onSelectLine, selectedLineNumber, emptyState }: { lines: LineResult[], onSelectLine: (line: LineResult) => void, selectedLineNumber: number | null, emptyState?: React.ReactNode }) {
     return (
         <ScrollArea className="h-[60vh] w-full rounded-md border">
             <div className="p-4">
-            {correctedLines.length > 0 && (
-                <div className="mb-4">
-                    <h3 className="mb-2 text-sm font-semibold text-green-700">Linhas Corrigidas ({correctedLines.length})</h3>
-                    {correctedLines.map((result) => (
-                        <InvalidLineItem key={result.lineNumber} result={result} onSelectLine={() => onSelectLine(result)} isSelected={selectedLineNumber === result.lineNumber} />
-                    ))}
-                </div>
-            )}
-            {stillInvalidLines.length > 0 && (
-                 <div>
-                    <h3 className="mb-2 text-sm font-semibold text-red-700">Linhas com Erro ({stillInvalidLines.length})</h3>
-                    {stillInvalidLines.map((result) => (
-                        <InvalidLineItem key={result.lineNumber} result={result} onSelectLine={() => onSelectLine(result)} isSelected={selectedLineNumber === result.lineNumber} />
-                    ))}
-                </div>
+            {lines.length > 0 ? (
+                 lines.map((result) => (
+                    <InvalidLineItem key={result.lineNumber} result={result} onSelectLine={() => onSelectLine(result)} isSelected={selectedLineNumber === result.lineNumber} />
+                ))
+            ) : (
+                emptyState
             )}
             </div>
         </ScrollArea>
@@ -1161,11 +1126,19 @@ export function FileValidator() {
             if (res.lineNumber === lineNumber) {
                 const newValidation = validateLine(newContent, lineNumber);
                 const isNowCorrect = res.errors.length > 0 && newValidation.errors.length === 0;
-                toast({
-                    title: isNowCorrect ? "Linha Corrigida!" : "Linha Atualizada",
-                    description: isNowCorrect ? `A linha ${lineNumber} agora é válida.` : `A linha ${lineNumber} foi atualizada, mas ainda contém erros.`,
-                    variant: isNowCorrect ? "default" : "destructive",
-                });
+                if (isNowCorrect) {
+                    toast({
+                        title: "Linha Corrigida!",
+                        description: `A linha ${lineNumber} foi movida para a aba 'Corrigidas'.`,
+                        className: 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 border-green-300 dark:border-green-700'
+                    });
+                } else {
+                     toast({
+                        title: "Linha Atualizada",
+                        description: newValidation.errors.length > 0 ? `A linha ${lineNumber} foi atualizada, mas ainda contém erros.` : `A linha ${lineNumber} foi atualizada.`,
+                        variant: newValidation.errors.length > 0 ? "destructive" : "default",
+                    });
+                }
                 const updatedLine = { ...newValidation, currentLineContent: newContent, originalLineContent: res.originalLineContent, isCorrected: isNowCorrect };
                 setEditingLine(updatedLine);
                 return updatedLine;
@@ -1288,17 +1261,20 @@ export function FileValidator() {
   }
 
 
-  const { validLines, invalidLines, fileContent, fileContentLines, allInvalidLines, tableData } = useMemo(() => {
+  const { validLines, invalidLines, correctedLines, fileContent, fileContentLines, tableData } = useMemo(() => {
     const valid: LineResult[] = [];
     const invalid: LineResult[] = [];
+    const corrected: LineResult[] = [];
     let content = "";
     
     results.forEach(r => {
       if (r.originalLineContent.trim() !== '') {
-        if (r.errors.length === 0 && !r.isCorrected) {
-          valid.push(r);
-        } else if (r.errors.length > 0 || r.isCorrected) {
+        if (r.isCorrected) {
+          corrected.push(r);
+        } else if (r.errors.length > 0) {
           invalid.push(r);
+        } else {
+          valid.push(r);
         }
       }
       if (r.originalLineContent) {
@@ -1315,30 +1291,27 @@ export function FileValidator() {
 
     return { 
         validLines: valid, 
-        invalidLines: invalid.filter(l => !l.isCorrected), 
+        invalidLines: invalid, 
+        correctedLines: corrected,
         fileContent: content,
         fileContentLines: lines,
-        allInvalidLines: invalid,
         tableData: tableResult
     };
   }, [results]);
 
   const stats = useMemo(() => {
     const totalLines = results.filter(r => r.originalLineContent.trim() !== '').length;
-    const correctedCount = results.filter(r => r.isCorrected).length;
-    const currentInvalidCount = results.filter(r => r.errors.length > 0 && !r.isCorrected).length;
-    const currentValidCount = totalLines - currentInvalidCount - correctedCount;
     const recordTypes = [...new Set(results.map(r => r.recordType).filter(Boolean))];
     const recordTypeNamesFound = recordTypes.map(rt => recordTypeNames[rt!] || rt).join(', ');
 
     return { 
         totalLines, 
-        validLines: currentValidCount, 
-        invalidLines: currentInvalidCount,
-        correctedLines: correctedCount,
+        validLines: validLines.length, 
+        invalidLines: invalidLines.length,
+        correctedLines: correctedLines.length,
         recordTypes: recordTypeNamesFound || 'Nenhum'
     };
-  }, [results]);
+  }, [results, validLines, invalidLines, correctedLines]);
 
 
   if (!file && !loading) {
@@ -1377,8 +1350,9 @@ export function FileValidator() {
                                     <h3 className="font-semibold text-base mb-2">2. Analisando os Resultados</h3>
                                     <p>Após a validação, a ferramenta exibirá os resultados em abas:</p>
                                     <ul className="list-disc pl-5 mt-2 space-y-1">
-                                        <li><strong>Linhas com Erro:</strong> Lista todas as linhas que não seguem o layout R2D2. As linhas corrigidas também aparecerão aqui com um status verde.</li>
-                                        <li><strong>Linhas Válidas:</strong> Mostra todas as linhas que foram validadas com sucesso.</li>
+                                        <li><strong>Linhas com Erro:</strong> Lista todas as linhas que não seguem o layout R2D2.</li>
+                                        <li><strong>Linhas Corrigidas:</strong> Exibe as linhas que você corrigiu e que agora são válidas.</li>
+                                        <li><strong>Linhas Válidas:</strong> Mostra todas as linhas que foram validadas com sucesso desde o início.</li>
                                         <li><strong>Arquivo Original:</strong> Exibe o conteúdo completo do arquivo que você enviou.</li>
                                     </ul>
                                 </section>
@@ -1503,12 +1477,13 @@ export function FileValidator() {
                                             <h3 className="font-semibold text-base mb-2">1. Carregando um Arquivo</h3>
                                             <p>Para começar, carregue um arquivo de importação no formato <strong>.txt</strong> ou <strong>.csv</strong>. Você pode clicar na área designada para abrir o seletor de arquivos ou simplesmente arrastar e soltar o arquivo na tela.</p>
                                         </section>
-                                        <section>
+                                         <section>
                                             <h3 className="font-semibold text-base mb-2">2. Analisando os Resultados</h3>
                                             <p>Após a validação, a ferramenta exibirá os resultados em abas:</p>
                                             <ul className="list-disc pl-5 mt-2 space-y-1">
-                                                <li><strong>Linhas com Erro:</strong> Lista todas as linhas que não seguem o layout R2D2. As linhas corrigidas também aparecerão aqui com um status verde.</li>
-                                                <li><strong>Linhas Válidas:</strong> Mostra todas as linhas que foram validadas com sucesso.</li>
+                                                <li><strong>Linhas com Erro:</strong> Lista todas as linhas que não seguem o layout R2D2.</li>
+                                                <li><strong>Linhas Corrigidas:</strong> Exibe as linhas que você corrigiu e que agora são válidas.</li>
+                                                <li><strong>Linhas Válidas:</strong> Mostra todas as linhas que foram validadas com sucesso desde o início.</li>
                                                 <li><strong>Arquivo Original:</strong> Exibe o conteúdo completo do arquivo que você enviou.</li>
                                             </ul>
                                         </section>
@@ -1603,23 +1578,24 @@ export function FileValidator() {
                                 <CardTitle className="text-sm font-medium">Tipos de Registro</CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <div className="text-sm font-bold truncate" title={stats.recordTypes}>{stats.recordTypes}</div>
+                                <p className="text-sm font-bold truncate" title={stats.recordTypes}>{stats.recordTypes}</p>
                             </CardContent>
                         </Card>
                     </div>
                     
                     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                        <TabsList className="grid w-full grid-cols-3">
-                            <TabsTrigger value="errors">Linhas com Erro ({stats.invalidLines + stats.correctedLines})</TabsTrigger>
+                        <TabsList className="grid w-full grid-cols-4">
+                            <TabsTrigger value="errors">Linhas com Erro ({stats.invalidLines})</TabsTrigger>
+                            <TabsTrigger value="corrected">Linhas Corrigidas ({stats.correctedLines})</TabsTrigger>
                             <TabsTrigger value="valid">Linhas Válidas ({stats.validLines})</TabsTrigger>
                             <TabsTrigger value="file">Arquivo Original</TabsTrigger>
                         </TabsList>
                         <TabsContent value="errors" className="mt-4">
-                            {allInvalidLines.length === 0 ? (
+                            {invalidLines.length === 0 ? (
                                 <div className="flex flex-col items-center justify-center h-96 text-center p-8 border rounded-md">
                                     <CheckCircle className="w-12 h-12 text-green-500 mb-4" />
                                     <h3 className="text-lg font-semibold">Nenhum erro encontrado!</h3>
-                                    <p className="text-muted-foreground">Todas as linhas foram validadas com sucesso.</p>
+                                    <p className="text-muted-foreground">Todas as linhas com problema foram corrigidas.</p>
                                 </div>
                             ) : (
                                 <div className={cn("grid gap-6 items-start", isEditorCollapsed ? "grid-cols-1" : "md:grid-cols-2")}>
@@ -1665,14 +1641,14 @@ export function FileValidator() {
                                         </div>
 
                                         {errorView === 'list' ? (
-                                            <SimpleInvalidLinesList 
-                                                allLines={allInvalidLines}
+                                            <SimpleLinesList 
+                                                lines={invalidLines}
                                                 onSelectLine={setEditingLine}
                                                 selectedLineNumber={editingLine?.lineNumber ?? null}
                                             />
                                         ) : (
                                             <GroupedInvalidLinesList 
-                                                allLines={allInvalidLines}
+                                                lines={invalidLines}
                                                 onSelectLine={setEditingLine}
                                                 selectedLineNumber={editingLine?.lineNumber ?? null}
                                             />
@@ -1702,6 +1678,20 @@ export function FileValidator() {
                                     </div>
                                 </div>
                             )}
+                        </TabsContent>
+                         <TabsContent value="corrected" className="mt-4">
+                             <SimpleLinesList 
+                                lines={correctedLines}
+                                onSelectLine={setEditingLine}
+                                selectedLineNumber={editingLine?.lineNumber ?? null}
+                                emptyState={
+                                    <div className="flex flex-col items-center justify-center h-full text-center p-8">
+                                        <AlertCircle className="w-12 h-12 text-yellow-500 mb-4" />
+                                        <h3 className="text-lg font-semibold">Nenhuma linha corrigida ainda.</h3>
+                                        <p className="text-muted-foreground">As linhas que você corrigir aparecerão aqui.</p>
+                                    </div>
+                                }
+                            />
                         </TabsContent>
                         <TabsContent value="valid" className="mt-4">
                              <ScrollArea className="h-[60vh] w-full rounded-md border">
