@@ -1753,12 +1753,12 @@ export function FileValidator() {
                                 </div>
                               ) : (
                                 <div className="relative overflow-auto">
-                                    <Table>
+                                    <Table className="font-mono text-xs">
                                         <TableHeader>
                                             <TableRow>
-                                                <TableHead className="w-16 sticky left-0 bg-background">Linha</TableHead>
+                                                <TableHead className="w-16 sticky left-0 bg-background z-10">Linha</TableHead>
                                                 {tableData.headers.map((header, index) => (
-                                                    <TableHead key={index}>{header}</TableHead>
+                                                    <TableHead key={index} className="border-l">{header}</TableHead>
                                                 ))}
                                             </TableRow>
                                         </TableHeader>
@@ -1766,11 +1766,11 @@ export function FileValidator() {
                                             {tableData.rows.map((row, rowIndex) => (
                                             row.length > 1 && (
                                                     <TableRow key={rowIndex}>
-                                                        <TableCell className="text-muted-foreground sticky left-0 bg-background">{rowIndex + 1}</TableCell>
+                                                        <TableCell className="text-muted-foreground sticky left-0 bg-background z-10">{rowIndex + 1}</TableCell>
                                                         {row.map((cell, cellIndex) => (
-                                                            <TableCell key={cellIndex} className="whitespace-nowrap">{cell}</TableCell>
+                                                            <TableCell key={cellIndex} className="whitespace-nowrap border-l">{cell}</TableCell>
                                                         ))}
-                                                        {row.length < tableData.headers.length && Array.from({length: tableData.headers.length - row.length}).map((_, i) => <TableCell key={`empty-${i}`}></TableCell>)}
+                                                        {row.length < tableData.headers.length && Array.from({length: tableData.headers.length - row.length}).map((_, i) => <TableCell key={`empty-${i}`} className="border-l"></TableCell>)}
                                                     </TableRow>
                                                 )
                                             ))}
