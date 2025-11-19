@@ -523,7 +523,7 @@ type LineResult = {
   currentLineContent: string;
   recordType?: string;
   errors: LineError[];
-  isCorrected?: boolean;
+  isCorrected: boolean;
 };
 
 type ErrorOccurrence = {
@@ -663,11 +663,13 @@ function InvalidLineItem({ result, onUpdateLine }: { result: LineResult; onUpdat
 }
 
 
-function GroupedInvalidLinesList({ invalidLines, onUpdateLine }: { invalidLines: LineResult[], onUpdateLine: (lineNumber: number, newContent: string) => void; }) {
-  const groupedErrors = useMemo<GroupedErrors>(() => {
+function GroupedInvalidLinesList({ allLines, onUpdateLine }: { allLines: LineResult[], onUpdateLine: (lineNumber: number, newContent: string) => void; }) {
+  const { correctedLines, groupedErrors } = useMemo(() => {
+    const corrected = allLines.filter(line => line.isCorrected);
+    const invalid = allLines.filter(line => !line.isCorrected);
+    
     const allErrors: ErrorOccurrence[] = [];
-    invalidLines.forEach(line => {
-        if (line.isCorrected) return; // Do not include corrected lines in error groups
+    invalid.forEach(line => {
         line.errors.forEach(error => {
             const rule = line.recordType ? validationRules[line.recordType] : undefined;
             const field = rule && error.columnIndex >= 0 ? rule.fields[error.columnIndex] : undefined;
@@ -675,7 +677,7 @@ function GroupedInvalidLinesList({ invalidLines, onUpdateLine }: { invalidLines:
         });
     });
 
-    return allErrors.reduce((acc, occurrence) => {
+    const grouped = allErrors.reduce((acc, occurrence) => {
         const mainErrorMessage = occurrence.error.message.split(' Sugestão:')[0] || 'Erro desconhecido';
         if (!acc[mainErrorMessage]) {
             acc[mainErrorMessage] = [];
@@ -683,9 +685,10 @@ function GroupedInvalidLinesList({ invalidLines, onUpdateLine }: { invalidLines:
         acc[mainErrorMessage].push(occurrence);
         return acc;
     }, {} as GroupedErrors);
-  }, [invalidLines]);
+    
+    return { correctedLines: corrected, groupedErrors: grouped };
+  }, [allLines]);
   
-  const correctedLines = useMemo(() => invalidLines.filter(line => line.isCorrected), [invalidLines]);
 
   return (
     <ScrollArea className="h-96 w-full rounded-md border">
@@ -812,7 +815,7 @@ export function FileValidator() {
     const recordType = fields[0]?.trim();
   
     if (!recordType && line.trim() === '') {
-      return { lineNumber, originalLineContent: line, currentLineContent: line, errors: [] }; // Ignore empty lines
+      return { lineNumber, originalLineContent: line, currentLineContent: line, errors: [], isCorrected: false }; // Ignore empty lines
     }
   
     const rule = validationRules[recordType];
@@ -863,7 +866,7 @@ export function FileValidator() {
       });
     }
   
-    return { lineNumber, originalLineContent: line, currentLineContent: line, recordType, errors: lineErrors };
+    return { lineNumber, originalLineContent: line, currentLineContent: line, recordType, errors: lineErrors, isCorrected: false };
   };
 
   const handleValidate = (fileToValidate: File) => {
@@ -908,8 +911,8 @@ export function FileValidator() {
             if (res.lineNumber === lineNumber) {
                 // Re-validate the manually corrected line to update its error state
                 const newValidation = validateLine(newContent, lineNumber);
-                const isCorrected = res.errors.length > 0 && newValidation.errors.length === 0;
-                return { ...newValidation, currentLineContent: newContent, originalLineContent: res.originalLineContent, isCorrected };
+                const isNowCorrect = res.errors.length > 0 && newValidation.errors.length === 0;
+                return { ...res, currentLineContent: newContent, errors: newValidation.errors, isCorrected: isNowCorrect };
             }
             return res;
         });
@@ -1095,8 +1098,8 @@ export function FileValidator() {
 
   const stats = useMemo(() => {
     const totalLines = results.filter(r => r.originalLineContent.trim() !== '').length;
-    const currentValidCount = results.filter(r => r.errors.length === 0 && r.originalLineContent.trim() !== '').length;
-    const currentInvalidCount = totalLines - currentValidCount;
+    const currentInvalidCount = results.filter(r => r.errors.length > 0 && !r.isCorrected).length;
+    const currentValidCount = totalLines - currentInvalidCount;
     const recordTypes = [...new Set(results.map(r => r.recordType).filter(Boolean))];
     const recordTypeNamesFound = recordTypes.map(rt => recordTypeNames[rt!] || rt).join(', ');
 
@@ -1394,7 +1397,7 @@ export function FileValidator() {
                                         />
                                     ) : (
                                         <GroupedInvalidLinesList 
-                                            invalidLines={invalidLines}
+                                            allLines={invalidLines}
                                             onUpdateLine={handleManualLineUpdate}
                                         />
                                     )}
@@ -1467,3 +1470,6 @@ export function FileValidator() {
     </div>
   );
 }
+
+
+    
