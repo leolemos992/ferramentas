@@ -12,7 +12,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { X, CheckCircle, AlertCircle, UploadCloud, FileCheck, Trash2, Loader2, Wrench, Download, FileText, Edit, Save, List, Group, HelpCircle, PencilLine, Columns2, PanelRightClose, PanelRightOpen, Sparkles } from "lucide-react";
+import { X, CheckCircle, AlertCircle, UploadCloud, FileCheck, Trash2, Loader2, Wrench, Download, FileText, Edit, Save, List, Group, HelpCircle, PencilLine, Columns2, PanelRightClose, PanelRightOpen, Sparkles, Table as TableIcon, Text } from "lucide-react";
 import { Label } from "./ui/label";
 import { cn } from "@/lib/utils";
 import { Badge } from "./ui/badge";
@@ -24,6 +24,7 @@ import autoTable from "jspdf-autotable";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "./ui/accordion";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose, DialogDescription } from "./ui/dialog";
 import { Textarea } from "./ui/textarea";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 
 
 type FieldRule = {
@@ -538,6 +539,7 @@ type GroupedErrors = {
 };
 
 type ErrorView = 'list' | 'grouped';
+type OriginalFileView = 'raw' | 'table';
 
 const recordTypeNames: { [key: string]: string } = {
     OP: "Operação",
@@ -995,6 +997,7 @@ export function FileValidator() {
   const [isDragging, setIsDragging] = useState(false);
   const [activeTab, setActiveTab] = useState("errors");
   const [errorView, setErrorView] = useState<ErrorView>('grouped');
+  const [originalFileView, setOriginalFileView] = useState<OriginalFileView>('raw');
   const [editingLine, setEditingLine] = useState<LineResult | null>(null);
   const [isEditorCollapsed, setIsEditorCollapsed] = useState(false);
 
@@ -1285,7 +1288,7 @@ export function FileValidator() {
   }
 
 
-  const { validLines, invalidLines, fileContent, allInvalidLines } = useMemo(() => {
+  const { validLines, invalidLines, fileContent, fileContentLines, allInvalidLines, tableData } = useMemo(() => {
     const valid: LineResult[] = [];
     const invalid: LineResult[] = [];
     let content = "";
@@ -1303,7 +1306,21 @@ export function FileValidator() {
       }
     });
 
-    return { validLines: valid, invalidLines: invalid.filter(l => !l.isCorrected), fileContent: content, allInvalidLines: invalid };
+    const lines = content.split('\n');
+    const maxColumns = Math.max(...lines.map(line => line.split(';').length));
+    const tableResult = {
+      headers: Array.from({ length: maxColumns }, (_, i) => `Campo ${i + 1}`),
+      rows: lines.map(line => line.split(';')),
+    }
+
+    return { 
+        validLines: valid, 
+        invalidLines: invalid.filter(l => !l.isCorrected), 
+        fileContent: content,
+        fileContentLines: lines,
+        allInvalidLines: invalid,
+        tableData: tableResult
+    };
   }, [results]);
 
   const stats = useMemo(() => {
@@ -1379,7 +1396,7 @@ export function FileValidator() {
                                 <section>
                                     <h3 className="font-semibold text-base mb-2">4. Correção em Massa e Download</h3>
                                     <ul className="list-disc pl-5 mt-2 space-y-1">
-                                        <li><strong>Corrigir Todos Automaticamente:</strong> Use este botão para aplicar a correção automática a todas as linhas com erro de uma só vez. <strong>Atenção:</strong> Revise as alterações, pois a automação pode não ser perfeita. Este botão fica disponível no painel do editor quando nenhuma linha está selecionada.</li>
+                                         <li><strong>Corrigir Todos Automaticamente:</strong> Use este botão para aplicar a correção automática a todas as linhas com erro de uma só vez. <strong>Atenção:</strong> Revise as alterações, pois a automação pode não ser perfeita. Este botão fica disponível no painel do editor quando nenhuma linha está selecionada.</li>
                                         <li><strong>Baixar Arquivo Corrigido:</strong> Após fazer todas as suas correções (manuais ou automáticas), clique neste botão para baixar o arquivo com o conteúdo final que você está vendo na tela.</li>
                                     </ul>
                                 </section>
@@ -1713,9 +1730,52 @@ export function FileValidator() {
                                 </div>
                             </ScrollArea>
                         </TabsContent>
-                         <TabsContent value="file" className="mt-4">
-                            <ScrollArea className="h-[60vh] w-full rounded-md border">
-                                <pre className="p-4 text-sm whitespace-pre-wrap">{fileContent}</pre>
+                         <TabsContent value="file" className="mt-4 space-y-4">
+                             <div className="flex items-center gap-1 rounded-md bg-muted p-1 w-min">
+                                <Button variant={originalFileView === 'raw' ? 'secondary' : 'ghost'} size="sm" onClick={() => setOriginalFileView('raw')}>
+                                    <Text className="mr-2 h-4 w-4"/>
+                                    Texto
+                                </Button>
+                                <Button variant={originalFileView === 'table' ? 'secondary' : 'ghost'} size="sm" onClick={() => setOriginalFileView('table')}>
+                                    <TableIcon className="mr-2 h-4 w-4" />
+                                    Tabela
+                                </Button>
+                            </div>
+                            <ScrollArea className="h-[60vh] w-full rounded-md border font-mono text-sm">
+                              {originalFileView === 'raw' ? (
+                                <div className="flex">
+                                  <div className="p-4 text-right bg-muted text-muted-foreground select-none sticky top-0">
+                                    {fileContentLines.map((_, index) => (
+                                      <div key={index}>{index + 1}</div>
+                                    ))}
+                                  </div>
+                                  <pre className="p-4 whitespace-pre-wrap flex-1">{fileContent}</pre>
+                                </div>
+                              ) : (
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead className="w-16">Linha</TableHead>
+                                            {tableData.headers.map((header, index) => (
+                                                <TableHead key={index}>{header}</TableHead>
+                                            ))}
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {tableData.rows.map((row, rowIndex) => (
+                                           row.length > 1 && (
+                                                <TableRow key={rowIndex}>
+                                                    <TableCell className="text-muted-foreground">{rowIndex + 1}</TableCell>
+                                                    {row.map((cell, cellIndex) => (
+                                                        <TableCell key={cellIndex}>{cell}</TableCell>
+                                                    ))}
+                                                    {row.length < tableData.headers.length && Array.from({length: tableData.headers.length - row.length}).map((_, i) => <TableCell key={`empty-${i}`}></TableCell>)}
+                                                </TableRow>
+                                            )
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                              )}
                             </ScrollArea>
                         </TabsContent>
                     </Tabs>
@@ -1725,6 +1785,3 @@ export function FileValidator() {
     </div>
   );
 }
-
-    
-    
