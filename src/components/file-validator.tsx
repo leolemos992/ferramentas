@@ -523,6 +523,7 @@ type LineResult = {
   currentLineContent: string;
   recordType?: string;
   errors: LineError[];
+  isCorrected?: boolean;
 };
 
 type ErrorOccurrence = {
@@ -572,7 +573,7 @@ function InvalidLineItem({ result, onUpdateLine }: { result: LineResult; onUpdat
     setIsEditing(false);
   };
   
-  const getHighlightedLine = (lineContent: string) => {
+  const getHighlightedLine = (lineContent: string, isCorrected?: boolean) => {
     const fields = lineContent.split(';');
     const rule = result.recordType ? validationRules[result.recordType] : undefined;
     const expectedFieldCount = rule?.fieldCount;
@@ -588,11 +589,11 @@ function InvalidLineItem({ result, onUpdateLine }: { result: LineResult; onUpdat
             "font-mono text-xs whitespace-pre-wrap break-all p-2 rounded-md border",
             isEditing 
                 ? "bg-white dark:bg-black focus:outline-blue-500 focus:ring-2 ring-blue-300"
-                : "bg-secondary/50"
+                : isCorrected ? "bg-green-100/50 dark:bg-green-900/30" : "bg-secondary/50"
         )}
       >
         {fields.map((field, index) => {
-          let isError = errorColumns.includes(index);
+          let isError = errorColumns.includes(index) && !isCorrected;
           if (!isError && isFieldCountError && expectedFieldCount && result.recordType !== 'XL' && index >= expectedFieldCount) {
             isError = true;
           }
@@ -607,15 +608,20 @@ function InvalidLineItem({ result, onUpdateLine }: { result: LineResult; onUpdat
   };
 
   return (
-    <div className="p-3 border-b mb-2 bg-secondary/30 rounded-lg">
+    <div className={cn(
+        "p-3 border-b mb-2 rounded-lg",
+        result.isCorrected ? "bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700" : "bg-secondary/30"
+    )}>
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-1">
             <div className="font-semibold text-sm">Linha {result.lineNumber}:</div>
-            <Badge variant="destructive">{result.recordType || 'N/A'}</Badge>
+            <Badge variant={result.isCorrected ? "default" : "destructive"} className={cn(result.isCorrected && "bg-green-600")}>
+                {result.recordType || 'N/A'}
+            </Badge>
           </div>
           <div className="mt-1">
-            {getHighlightedLine(result.currentLineContent)}
+            {getHighlightedLine(result.currentLineContent, result.isCorrected)}
           </div>
           {isEditing && (
              <div className="flex gap-2 mt-2">
@@ -630,20 +636,28 @@ function InvalidLineItem({ result, onUpdateLine }: { result: LineResult; onUpdat
             </Button>
         )}
       </div>
-      <div className="mt-2 pl-1">
-        <h4 className="font-semibold text-sm mb-1 text-red-800">Erros Encontrados na Linha:</h4>
-        <ul className="space-y-1 list-disc pl-5">
-          {result.errors.map((error, index) => {
-            const fieldRule = result.recordType && error.columnIndex >= 0 ? validationRules[result.recordType]?.fields[error.columnIndex] : null;
-            const fieldName = fieldRule ? fieldRule.name : 'Geral';
-            return (
-              <li key={index} className="text-red-700 text-xs font-sans">
-                <b>{fieldName} (Campo {error.columnIndex + 1}):</b> {error.message}
-              </li>
-            );
-          })}
-        </ul>
-      </div>
+      {result.errors.length > 0 && !result.isCorrected && (
+        <div className="mt-2 pl-1">
+            <h4 className="font-semibold text-sm mb-1 text-red-800">Erros Encontrados na Linha:</h4>
+            <ul className="space-y-1 list-disc pl-5">
+            {result.errors.map((error, index) => {
+                const fieldRule = result.recordType && error.columnIndex >= 0 ? validationRules[result.recordType]?.fields[error.columnIndex] : null;
+                const fieldName = fieldRule ? fieldRule.name : 'Geral';
+                return (
+                <li key={index} className="text-red-700 text-xs font-sans">
+                    <b>{fieldName} (Campo {error.columnIndex + 1}):</b> {error.message}
+                </li>
+                );
+            })}
+            </ul>
+        </div>
+      )}
+       {result.isCorrected && (
+        <div className="mt-2 flex items-center gap-2 text-sm font-medium text-green-700 dark:text-green-300 p-2 bg-green-100 dark:bg-green-900/50 rounded-md">
+            <CheckCircle className="h-4 w-4"/>
+            <span>Linha corrigida com sucesso!</span>
+        </div>
+       )}
     </div>
   );
 }
@@ -653,6 +667,7 @@ function GroupedInvalidLinesList({ invalidLines, onUpdateLine }: { invalidLines:
   const groupedErrors = useMemo<GroupedErrors>(() => {
     const allErrors: ErrorOccurrence[] = [];
     invalidLines.forEach(line => {
+        if (line.isCorrected) return; // Do not include corrected lines in error groups
         line.errors.forEach(error => {
             const rule = line.recordType ? validationRules[line.recordType] : undefined;
             const field = rule && error.columnIndex >= 0 ? rule.fields[error.columnIndex] : undefined;
@@ -669,10 +684,27 @@ function GroupedInvalidLinesList({ invalidLines, onUpdateLine }: { invalidLines:
         return acc;
     }, {} as GroupedErrors);
   }, [invalidLines]);
+  
+  const correctedLines = useMemo(() => invalidLines.filter(line => line.isCorrected), [invalidLines]);
 
   return (
     <ScrollArea className="h-96 w-full rounded-md border">
       <Accordion type="multiple" className="p-4">
+        {correctedLines.length > 0 && (
+            <AccordionItem value="corrected-lines" className="border-green-300 dark:border-green-700">
+                 <AccordionTrigger className="text-sm hover:no-underline text-green-700 dark:text-green-300">
+                    <div className="flex items-center gap-2 text-left">
+                        <CheckCircle className="h-4 w-4 shrink-0"/>
+                        <span>Linhas Corrigidas <Badge className="bg-green-600 hover:bg-green-700">{correctedLines.length}</Badge></span>
+                    </div>
+                </AccordionTrigger>
+                <AccordionContent>
+                    {correctedLines.map((line) => (
+                        <InvalidLineItem key={line.lineNumber} result={line} onUpdateLine={onUpdateLine} />
+                    ))}
+                </AccordionContent>
+            </AccordionItem>
+        )}
         {Object.entries(groupedErrors).map(([errorMessage, occurrences]) => (
           <AccordionItem value={errorMessage} key={errorMessage}>
             <AccordionTrigger className="text-sm hover:no-underline">
@@ -876,7 +908,8 @@ export function FileValidator() {
             if (res.lineNumber === lineNumber) {
                 // Re-validate the manually corrected line to update its error state
                 const newValidation = validateLine(newContent, lineNumber);
-                return { ...newValidation, currentLineContent: newContent, originalLineContent: res.originalLineContent };
+                const isCorrected = res.errors.length > 0 && newValidation.errors.length === 0;
+                return { ...newValidation, currentLineContent: newContent, originalLineContent: res.originalLineContent, isCorrected };
             }
             return res;
         });
@@ -1062,16 +1095,18 @@ export function FileValidator() {
 
   const stats = useMemo(() => {
     const totalLines = results.filter(r => r.originalLineContent.trim() !== '').length;
+    const currentValidCount = results.filter(r => r.errors.length === 0 && r.originalLineContent.trim() !== '').length;
+    const currentInvalidCount = totalLines - currentValidCount;
     const recordTypes = [...new Set(results.map(r => r.recordType).filter(Boolean))];
     const recordTypeNamesFound = recordTypes.map(rt => recordTypeNames[rt!] || rt).join(', ');
 
     return { 
         totalLines, 
-        validLines: validLines.length, 
-        invalidLines: invalidLines.length,
+        validLines: currentValidCount, 
+        invalidLines: currentInvalidCount,
         recordTypes: recordTypeNamesFound || 'Nenhum'
     };
-  }, [results, validLines.length, invalidLines.length]);
+  }, [results]);
 
 
   if (!file && !loading) {
@@ -1326,12 +1361,12 @@ export function FileValidator() {
                     
                     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                         <TabsList className="grid w-full grid-cols-3">
-                            <TabsTrigger value="errors">Linhas com Erro ({invalidLines.length})</TabsTrigger>
-                            <TabsTrigger value="valid">Linhas Válidas ({validLines.length})</TabsTrigger>
+                            <TabsTrigger value="errors">Linhas com Erro ({stats.invalidLines})</TabsTrigger>
+                            <TabsTrigger value="valid">Linhas Válidas ({stats.validLines})</TabsTrigger>
                             <TabsTrigger value="file">Arquivo Original</TabsTrigger>
                         </TabsList>
                         <TabsContent value="errors" className="mt-4">
-                            {invalidLines.length === 0 ? (
+                            {stats.invalidLines === 0 && !results.some(r => r.isCorrected) ? (
                                 <div className="flex flex-col items-center justify-center h-96 text-center p-8 border rounded-md">
                                     <CheckCircle className="w-12 h-12 text-green-500 mb-4" />
                                     <h3 className="text-lg font-semibold">Nenhum erro encontrado!</h3>
