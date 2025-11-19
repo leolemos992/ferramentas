@@ -678,7 +678,7 @@ function InvalidLineItem({ result, onUpdateLine }: { result: LineResult; onUpdat
                 {result.isCorrected ? 'Corrigido' : result.recordType || 'Inválido'}
             </Badge>
           </div>
-          <div className="truncate">{result.currentLineContent}</div>
+          <div className="break-all">{result.currentLineContent}</div>
         </div>
         {!result.isCorrected && (
           <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => setIsEditing(true)}>
@@ -1519,7 +1519,7 @@ export function FileValidator() {
                                             <CheckCircle className="h-5 w-5 text-green-600 shrink-0" />
                                             <div>Linha {result.lineNumber}: <Badge variant="secondary">{result.recordType || 'N/A'}</Badge></div>
                                         </div>
-                                        <div className="font-mono text-xs whitespace-pre-wrap break-all truncate mt-1 ml-9 text-muted-foreground">{result.currentLineContent}</div>
+                                        <div className="font-mono text-xs whitespace-pre-wrap break-all mt-1 ml-9 text-muted-foreground">{result.currentLineContent}</div>
                                     </div>
                                 ))}
                                 </div>
@@ -1570,3 +1570,5 @@ export function FileValidator() {
     </div>
   );
 }
+
+    
