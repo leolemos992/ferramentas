@@ -1,6 +1,17 @@
 {
     "notes": [
         {
+            "version": "0.0.0.8",
+            "date": "2024-08-07",
+            "changes": [
+                "Reformulado o Validador R2D2 com uma seção de 'Editor' dedicada e painel recolhível para melhor visualização.",
+                "Adicionada opção de edição detalhada (campo por campo) e edição rápida (linha inteira).",
+                "Implementada correção automática para linhas individuais diretamente no editor.",
+                "Adicionada funcionalidade de 'Corrigir Todos Automaticamente' com um diálogo de aviso para o usuário.",
+                "Melhorado o feedback visual na edição, com placeholders, contadores de caracteres e validação de tamanho máximo nos campos."
+            ]
+        },
+        {
             "version": "0.0.0.7",
             "date": "2024-08-06",
             "changes": [
