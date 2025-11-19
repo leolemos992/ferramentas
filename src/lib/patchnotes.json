@@ -1,6 +1,16 @@
 {
     "notes": [
         {
+            "version": "0.0.0.7",
+            "date": "2024-08-06",
+            "changes": [
+                "Melhorado o feedback visual no Validador R2D2: linhas corrigidas agora exibem um status de 'Corrigido' com destaque verde, em vez de desaparecerem da lista.",
+                "Ajustado o layout do Analisador de XML para uma melhor organização e alinhamento dos elementos.",
+                "Ajustado o script de deploy para garantir a publicação correta no GitHub Pages.",
+                "Simplificado o texto de créditos no rodapé."
+            ]
+        },
+        {
             "version": "0.0.0.6",
             "date": "2024-08-05",
             "changes": [
