@@ -1379,7 +1379,7 @@ export function FileValidator() {
                                 <section>
                                     <h3 className="font-semibold text-base mb-2">4. Correção em Massa e Download</h3>
                                     <ul className="list-disc pl-5 mt-2 space-y-1">
-                                        <li><strong>Corrigir Todos Automaticamente:</strong> Use este botão para aplicar a correção automática a todas as linhas com erro de uma só vez. <strong>Atenção:</strong> Revise as alterações, pois a automação pode não ser perfeita.</li>
+                                        <li><strong>Corrigir Todos Automaticamente:</strong> Use este botão para aplicar a correção automática a todas as linhas com erro de uma só vez. <strong>Atenção:</strong> Revise as alterações, pois a automação pode não ser perfeita. Este botão fica disponível no painel do editor quando nenhuma linha está selecionada.</li>
                                         <li><strong>Baixar Arquivo Corrigido:</strong> Após fazer todas as suas correções (manuais ou automáticas), clique neste botão para baixar o arquivo com o conteúdo final que você está vendo na tela.</li>
                                     </ul>
                                 </section>
@@ -1509,7 +1509,7 @@ export function FileValidator() {
                                         <section>
                                             <h3 className="font-semibold text-base mb-2">4. Correção em Massa e Download</h3>
                                             <ul className="list-disc pl-5 mt-2 space-y-1">
-                                                <li><strong>Corrigir Todos Automaticamente:</strong> Use este botão para aplicar a correção automática a todas as linhas com erro de uma só vez. <strong>Atenção:</strong> Revise as alterações, pois a automação pode não ser perfeita.</li>
+                                                 <li><strong>Corrigir Todos Automaticamente:</strong> Use este botão para aplicar a correção automática a todas as linhas com erro de uma só vez. <strong>Atenção:</strong> Revise as alterações, pois a automação pode não ser perfeita. Este botão fica disponível no painel do editor quando nenhuma linha está selecionada.</li>
                                                 <li><strong>Baixar Arquivo Corrigido:</strong> Após fazer todas as suas correções (manuais ou automáticas), clique neste botão para baixar o arquivo com o conteúdo final que você está vendo na tela.</li>
                                             </ul>
                                         </section>
@@ -1525,29 +1525,6 @@ export function FileValidator() {
                                 <UploadCloud className="mr-2"/>
                                 Carregar Novo Arquivo
                             </Button>
-                            <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                    <Button variant="outline" disabled={invalidLines.length === 0}>
-                                        <Sparkles className="mr-2" />
-                                        Corrigir Todos Automaticamente
-                                    </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                        <AlertDialogTitle>Confirmar Correção Automática em Massa?</AlertDialogTitle>
-                                        <AlertDialogDescription>
-                                            Esta ação tentará corrigir todas as {invalidLines.length} linhas com erro restantes de uma só vez.
-                                            A correção automática é um processo de "melhor esforço" e pode não resolver todos os problemas perfeitamente ou pode introduzir novos erros.
-                                            <br/><br/>
-                                            <strong>É altamente recomendável que você revise as alterações após a conclusão.</strong> Deseja continuar?
-                                        </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                        <AlertDialogAction onClick={handleAutoCorrectAll}>Sim, Corrigir Todos</AlertDialogAction>
-                                    </AlertDialogFooter>
-                                </AlertDialogContent>
-                            </AlertDialog>
 
                             <Button variant="outline" onClick={handleExportPdf} disabled={invalidLines.length === 0}>
                                 <FileText className="mr-2"/>
@@ -1672,12 +1649,41 @@ export function FileValidator() {
                                            <Card className="sticky top-6">
                                                 <CardHeader>
                                                     <CardTitle className="text-lg">Editor</CardTitle>
-                                                    <CardDescription>Selecione uma linha com erro para começar.</CardDescription>
+                                                    <CardDescription>Selecione uma linha para editar ou use a correção automática.</CardDescription>
                                                 </CardHeader>
                                                 <CardContent>
-                                                    <div className="flex flex-col items-center justify-center h-64 text-center border-2 border-dashed rounded-lg">
+                                                    <div className="flex flex-col items-center justify-center h-64 text-center border-2 border-dashed rounded-lg p-4">
                                                         <Edit className="w-10 h-10 text-muted-foreground mb-4"/>
-                                                        <p className="text-muted-foreground">Clique em uma linha na lista ao lado para editá-la aqui.</p>
+                                                        <p className="text-muted-foreground mb-4">Clique em uma linha na lista ao lado para editá-la aqui.</p>
+                                                        <div className="w-full my-4 flex items-center gap-2">
+                                                            <div className="flex-1 border-t"></div>
+                                                            <span className="text-xs text-muted-foreground">OU</span>
+                                                            <div className="flex-1 border-t"></div>
+                                                        </div>
+                                                        <AlertDialog>
+                                                            <AlertDialogTrigger asChild>
+                                                                <Button variant="default" disabled={invalidLines.length === 0} className="w-full">
+                                                                    <Sparkles className="mr-2" />
+                                                                    Corrigir Todos Automaticamente
+                                                                </Button>
+                                                            </AlertDialogTrigger>
+                                                            <AlertDialogContent>
+                                                                <AlertDialogHeader>
+                                                                    <AlertDialogTitle>Confirmar Correção Automática em Massa?</AlertDialogTitle>
+                                                                    <AlertDialogDescription>
+                                                                        Esta ação tentará corrigir todas as {invalidLines.length} linhas com erro restantes de uma só vez.
+                                                                        A correção automática é um processo de "melhor esforço" e pode não resolver todos os problemas perfeitamente ou pode introduzir novos erros.
+                                                                        <br/><br/>
+                                                                        <strong>É altamente recomendável que você revise as alterações após a conclusão.</strong> Deseja continuar?
+                                                                    </AlertDialogDescription>
+                                                                </AlertDialogHeader>
+                                                                <AlertDialogFooter>
+                                                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                                                    <AlertDialogAction onClick={handleAutoCorrectAll}>Sim, Corrigir Todos</AlertDialogAction>
+                                                                </AlertDialogFooter>
+                                                            </AlertDialogContent>
+                                                        </AlertDialog>
+                                                        <p className="text-xs text-muted-foreground mt-2">Esta ação tentará corrigir todos os {invalidLines.length} erros restantes de uma vez.</p>
                                                     </div>
                                                 </CardContent>
                                             </Card>
