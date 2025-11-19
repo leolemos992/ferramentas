@@ -12,7 +12,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { X, CheckCircle, AlertCircle, UploadCloud, FileCheck, Trash2, Loader2, Wrench, Download, FileText, Edit, Save, List, Group, HelpCircle, PencilLine, Columns2 } from "lucide-react";
+import { X, CheckCircle, AlertCircle, UploadCloud, FileCheck, Trash2, Loader2, Wrench, Download, FileText, Edit, Save, List, Group, HelpCircle, PencilLine, Columns2, PanelRightClose, PanelRightOpen } from "lucide-react";
 import { Label } from "./ui/label";
 import { cn } from "@/lib/utils";
 import { Badge } from "./ui/badge";
@@ -683,8 +683,13 @@ function CorrectionEditor({ result, onUpdateLine, onCancel }: { result: LineResu
   return (
     <Card className="sticky top-6">
         <CardHeader>
-            <CardTitle className="text-lg">Editor de Correção</CardTitle>
-            <CardDescription>Editando Linha <span className="font-bold">{result.lineNumber}</span> ({result.recordType})</CardDescription>
+            <div className="flex justify-between items-start">
+                <div>
+                    <CardTitle className="text-lg">Editor de Correção</CardTitle>
+                    <CardDescription>Editando Linha <span className="font-bold">{result.lineNumber}</span> ({result.recordType})</CardDescription>
+                </div>
+                 <Button size="sm" variant="ghost" onClick={onCancel}>Fechar</Button>
+            </div>
         </CardHeader>
         <CardContent>
             <Tabs defaultValue="detailed">
@@ -721,7 +726,6 @@ function CorrectionEditor({ result, onUpdateLine, onCancel }: { result: LineResu
                     </ScrollArea>
                     <div className="flex gap-2 mt-4">
                         <Button size="sm" onClick={handleSaveDetailed}><Save className="mr-2 h-4 w-4"/> Salvar Alterações</Button>
-                        <Button size="sm" variant="ghost" onClick={onCancel}>Fechar</Button>
                     </div>
                 </TabsContent>
                 <TabsContent value="quick" className="mt-4">
@@ -741,7 +745,6 @@ function CorrectionEditor({ result, onUpdateLine, onCancel }: { result: LineResu
                         </div>
                         <div className="flex gap-2">
                             <Button size="sm" onClick={handleSaveQuick}><Save className="mr-2 h-4 w-4"/> Salvar Linha</Button>
-                            <Button size="sm" variant="ghost" onClick={onCancel}>Fechar</Button>
                         </div>
                     </div>
                 </TabsContent>
@@ -752,31 +755,6 @@ function CorrectionEditor({ result, onUpdateLine, onCancel }: { result: LineResu
 }
 
 function InvalidLineItem({ result, onSelectLine, isSelected }: { result: LineResult; onSelectLine: () => void; isSelected: boolean }) {
-  const getHighlightedLine = (lineContent: string) => {
-    const fields = lineContent.split(';');
-    const errorColumns = result.errors.map(e => e.columnIndex);
-    const hasFieldCountError = result.errors.some(e => e.isFieldCountError);
-    const rule = result.recordType ? validationRules[result.recordType] : null;
-
-    return (
-      <div className="font-mono text-xs whitespace-pre-wrap break-words p-2 rounded-md bg-secondary/50 border">
-        {fields.map((field, index) => {
-          let isError = errorColumns.includes(index);
-          if (hasFieldCountError && rule && result.recordType !== 'XL' && index >= rule.fieldCount) {
-             isError = true;
-          }
-
-          return (
-            <span key={index}>
-              <span className={cn(isError && "bg-red-200 text-red-900 rounded-sm p-0.5")}>{field}</span>
-              {index < fields.length - 1 && <span className="text-gray-400 mx-px">;</span>}
-            </span>
-          )
-        })}
-      </div>
-    );
-  };
-
   return (
     <div 
         onClick={onSelectLine}
@@ -806,7 +784,6 @@ function InvalidLineItem({ result, onSelectLine, isSelected }: { result: LineRes
                 <AccordionContent className="pt-2">
                     <div className="p-2 bg-background rounded-md border border-red-200">
                         <h4 className="font-semibold text-sm mb-1 text-red-800">Erros Encontrados:</h4>
-                        {getHighlightedLine(result.currentLineContent)}
                         <ul className="space-y-1 list-disc pl-5 mt-2">
                         {result.errors.map((error, index) => {
                             const fieldRule = result.recordType && error.columnIndex >= 0 ? validationRules[result.recordType]?.fields[error.columnIndex] : null;
@@ -947,6 +924,7 @@ export function FileValidator() {
   const [isConfirmingCorrection, setIsConfirmingCorrection] = useState(false);
   const [errorView, setErrorView] = useState<ErrorView>('grouped');
   const [editingLine, setEditingLine] = useState<LineResult | null>(null);
+  const [isEditorCollapsed, setIsEditorCollapsed] = useState(false);
 
 
   const handleFileDrop = (selectedFile: File | undefined) => {
@@ -1596,9 +1574,9 @@ export function FileValidator() {
                                     <p className="text-muted-foreground">Todas as linhas foram validadas com sucesso.</p>
                                 </div>
                             ) : (
-                                <div className="grid md:grid-cols-2 gap-6 items-start">
+                                <div className={cn("grid gap-6 items-start", isEditorCollapsed ? "grid-cols-1" : "md:grid-cols-2")}>
                                     <div className="space-y-4">
-                                        <div className="flex justify-end">
+                                        <div className="flex justify-between">
                                             <div className="flex items-center gap-1 rounded-md bg-muted p-1">
                                                 <Button variant={errorView === 'list' ? 'secondary' : 'ghost'} size="sm" onClick={() => setErrorView('list')}>
                                                     <List className="mr-2 h-4 w-4"/>
@@ -1609,6 +1587,10 @@ export function FileValidator() {
                                                     Agrupar Erros
                                                 </Button>
                                             </div>
+                                            <Button variant="outline" size="sm" onClick={() => setIsEditorCollapsed(c => !c)}>
+                                                {isEditorCollapsed ? <PanelRightOpen className="mr-2" /> : <PanelRightClose className="mr-2" />}
+                                                {isEditorCollapsed ? 'Mostrar Editor' : 'Ocultar Editor'}
+                                            </Button>
                                         </div>
 
                                         {errorView === 'list' ? (
@@ -1625,7 +1607,7 @@ export function FileValidator() {
                                             />
                                         )}
                                     </div>
-                                    <div>
+                                    <div className={cn(isEditorCollapsed && "hidden")}>
                                         {editingLine ? (
                                             <CorrectionEditor 
                                                 result={editingLine}
@@ -1716,5 +1698,7 @@ export function FileValidator() {
     </div>
   );
 }
+
+    
 
     
