@@ -1741,7 +1741,7 @@ export function FileValidator() {
                                     Tabela
                                 </Button>
                             </div>
-                            <div className="rounded-md border overflow-auto max-h-[60vh]">
+                            <div className="rounded-md border overflow-y-auto max-h-[60vh]">
                               {originalFileView === 'raw' ? (
                                 <ScrollArea className="h-full">
                                     <div className="flex font-mono text-sm">
@@ -1754,6 +1754,7 @@ export function FileValidator() {
                                     </div>
                                 </ScrollArea>
                               ) : (
+                                <div className="overflow-x-auto">
                                 <Table className="font-mono text-xs">
                                     <TableHeader>
                                         <TableRow>
@@ -1777,6 +1778,7 @@ export function FileValidator() {
                                         ))}
                                     </TableBody>
                                 </Table>
+                                </div>
                               )}
                             </div>
                         </TabsContent>
