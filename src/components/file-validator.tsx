@@ -1624,7 +1624,7 @@ export function FileValidator() {
                             ) : (
                                 <div className={cn("grid gap-6 items-start", isEditorCollapsed ? "grid-cols-1" : "md:grid-cols-2")}>
                                     <div className="space-y-4">
-                                        <div className="flex justify-between">
+                                        <div className="flex justify-between items-center">
                                             <div className="flex items-center gap-1 rounded-md bg-muted p-1">
                                                 <Button variant={errorView === 'list' ? 'secondary' : 'ghost'} size="sm" onClick={() => setErrorView('list')}>
                                                     <List className="mr-2 h-4 w-4"/>
@@ -1634,6 +1634,29 @@ export function FileValidator() {
                                                     <Group className="mr-2 h-4 w-4" />
                                                     Agrupar Erros
                                                 </Button>
+                                                <AlertDialog>
+                                                    <AlertDialogTrigger asChild>
+                                                        <Button variant="outline" size="sm" disabled={invalidLines.length === 0}>
+                                                            <Sparkles className="mr-2" />
+                                                            Corrigir Todos
+                                                        </Button>
+                                                    </AlertDialogTrigger>
+                                                    <AlertDialogContent>
+                                                        <AlertDialogHeader>
+                                                            <AlertDialogTitle>Confirmar Correção Automática em Massa?</AlertDialogTitle>
+                                                            <AlertDialogDescription>
+                                                                Esta ação tentará corrigir todas as {invalidLines.length} linhas com erro restantes de uma só vez.
+                                                                A correção automática é um processo de "melhor esforço" e pode não resolver todos os problemas perfeitamente.
+                                                                <br/><br/>
+                                                                <strong>É altamente recomendável que você revise as alterações após a conclusão.</strong> Deseja continuar?
+                                                            </AlertDialogDescription>
+                                                        </AlertDialogHeader>
+                                                        <AlertDialogFooter>
+                                                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                                            <AlertDialogAction onClick={handleAutoCorrectAll}>Sim, Corrigir Todos</AlertDialogAction>
+                                                        </AlertDialogFooter>
+                                                    </AlertDialogContent>
+                                                </AlertDialog>
                                             </div>
                                             <Button variant="outline" size="sm" onClick={() => setIsEditorCollapsed(c => !c)}>
                                                 {isEditorCollapsed ? <PanelRightOpen className="mr-2" /> : <PanelRightClose className="mr-2" />}
@@ -1666,41 +1689,12 @@ export function FileValidator() {
                                            <Card className="sticky top-6">
                                                 <CardHeader>
                                                     <CardTitle className="text-lg">Editor</CardTitle>
-                                                    <CardDescription>Selecione uma linha para editar ou use a correção automática.</CardDescription>
+                                                    <CardDescription>Selecione uma linha para editar ou use a correção em massa.</CardDescription>
                                                 </CardHeader>
                                                 <CardContent>
                                                     <div className="flex flex-col items-center justify-center h-64 text-center border-2 border-dashed rounded-lg p-4">
                                                         <Edit className="w-10 h-10 text-muted-foreground mb-4"/>
-                                                        <p className="text-muted-foreground mb-4">Clique em uma linha na lista ao lado para editá-la aqui.</p>
-                                                        <div className="w-full my-4 flex items-center gap-2">
-                                                            <div className="flex-1 border-t"></div>
-                                                            <span className="text-xs text-muted-foreground">OU</span>
-                                                            <div className="flex-1 border-t"></div>
-                                                        </div>
-                                                        <AlertDialog>
-                                                            <AlertDialogTrigger asChild>
-                                                                <Button variant="default" disabled={invalidLines.length === 0} className="w-full">
-                                                                    <Sparkles className="mr-2" />
-                                                                    Corrigir Todos Automaticamente
-                                                                </Button>
-                                                            </AlertDialogTrigger>
-                                                            <AlertDialogContent>
-                                                                <AlertDialogHeader>
-                                                                    <AlertDialogTitle>Confirmar Correção Automática em Massa?</AlertDialogTitle>
-                                                                    <AlertDialogDescription>
-                                                                        Esta ação tentará corrigir todas as {invalidLines.length} linhas com erro restantes de uma só vez.
-                                                                        A correção automática é um processo de "melhor esforço" e pode não resolver todos os problemas perfeitamente ou pode introduzir novos erros.
-                                                                        <br/><br/>
-                                                                        <strong>É altamente recomendável que você revise as alterações após a conclusão.</strong> Deseja continuar?
-                                                                    </AlertDialogDescription>
-                                                                </AlertDialogHeader>
-                                                                <AlertDialogFooter>
-                                                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                                                    <AlertDialogAction onClick={handleAutoCorrectAll}>Sim, Corrigir Todos</AlertDialogAction>
-                                                                </AlertDialogFooter>
-                                                            </AlertDialogContent>
-                                                        </AlertDialog>
-                                                        <p className="text-xs text-muted-foreground mt-2">Esta ação tentará corrigir todos os {invalidLines.length} erros restantes de uma vez.</p>
+                                                        <p className="text-muted-foreground">Clique em uma linha na lista ao lado para editá-la aqui.</p>
                                                     </div>
                                                 </CardContent>
                                             </Card>
@@ -1743,19 +1737,23 @@ export function FileValidator() {
                             </div>
                             <div className="rounded-md border">
                               {originalFileView === 'raw' ? (
-                                <ScrollArea className="h-[60vh]">
-                                    <div className="flex font-mono text-sm">
-                                    <div className="p-4 text-right bg-muted text-muted-foreground select-none sticky left-0">
-                                        {fileContentLines.map((_, index) => (
-                                        <div key={index}>{index + 1}</div>
-                                        ))}
-                                    </div>
-                                    <pre className="p-4 whitespace-pre-wrap flex-1">{fileContent}</pre>
-                                    </div>
-                                </ScrollArea>
+                                <div className="relative overflow-hidden">
+                                  <div className="max-h-[60vh] overflow-auto">
+                                    <Table className="font-mono text-xs">
+                                        <TableBody>
+                                            {fileContentLines.map((line, index) => (
+                                                <TableRow key={index} className="hover:bg-muted/30">
+                                                    <TableCell className="w-16 p-2 text-right text-muted-foreground select-none border-r">{index + 1}</TableCell>
+                                                    <TableCell className="whitespace-pre-wrap p-2">{line}</TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                  </div>
+                                </div>
                               ) : (
-                                <div className="overflow-x-auto">
-                                  <div className="max-h-[60vh] overflow-y-auto">
+                                <div className="max-h-[60vh] overflow-y-auto">
+                                  <div className="overflow-x-auto">
                                     <Table className="font-mono text-xs">
                                         <TableHeader className="sticky top-0 bg-background z-10">
                                             <TableRow>
