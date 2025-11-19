@@ -1063,8 +1063,6 @@ export function FileValidator() {
       const invalidCount = validationResults.filter(r => r.errors.length > 0).length;
       if (invalidCount > 0) {
         setActiveTab("errors");
-        const firstError = validationResults.find(r => r.errors.length > 0);
-        if (firstError) setEditingLine(firstError);
       } else {
         setActiveTab("valid");
       }
@@ -1698,6 +1696,8 @@ export function FileValidator() {
     </div>
   );
 }
+
+    
 
     
 
