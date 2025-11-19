@@ -610,6 +610,31 @@ function CorrectionEditor({ result, onUpdateLine, onCancel }: { result: LineResu
     onUpdateLine(result.lineNumber, quickEditContent);
   }
 
+  const getHighlightedLine = (lineContent: string) => {
+    const fields = lineContent.split(';');
+    const errorColumns = result.errors.map(e => e.columnIndex);
+    const hasFieldCountError = result.errors.some(e => e.isFieldCountError);
+    const rule = result.recordType ? validationRules[result.recordType] : null;
+
+    return (
+      <div className="font-mono text-xs whitespace-pre-wrap break-words p-2 rounded-md bg-secondary/50 border">
+        {fields.map((field, index) => {
+          let isError = errorColumns.includes(index);
+          if (hasFieldCountError && rule && result.recordType !== 'XL' && index >= rule.fieldCount) {
+             isError = true;
+          }
+
+          return (
+            <span key={index}>
+              <span className={cn(isError && "bg-red-200 text-red-900 rounded-sm p-0.5")}>{field}</span>
+              {index < fields.length - 1 && <span className="text-gray-400 mx-px">;</span>}
+            </span>
+          )
+        })}
+      </div>
+    );
+  };
+
   if (!rule) {
       return (
         <Card className="sticky top-6">
@@ -662,13 +687,19 @@ function CorrectionEditor({ result, onUpdateLine, onCancel }: { result: LineResu
                 </TabsContent>
                 <TabsContent value="quick" className="mt-4">
                     <div className="space-y-4">
-                        <Label htmlFor="quick-edit-area">Conteúdo da Linha</Label>
-                        <Textarea 
-                            id="quick-edit-area"
-                            value={quickEditContent}
-                            onChange={(e) => setQuickEditContent(e.target.value)}
-                            className="h-48 font-mono text-xs"
-                        />
+                        <div>
+                            <Label>Visualização do Erro</Label>
+                            {getHighlightedLine(result.currentLineContent)}
+                        </div>
+                        <div>
+                            <Label htmlFor="quick-edit-area">Conteúdo da Linha</Label>
+                            <Textarea 
+                                id="quick-edit-area"
+                                value={quickEditContent}
+                                onChange={(e) => setQuickEditContent(e.target.value)}
+                                className="h-48 font-mono text-xs"
+                            />
+                        </div>
                         <div className="flex gap-2">
                             <Button size="sm" onClick={handleSaveQuick}><Save className="mr-2 h-4 w-4"/> Salvar Linha</Button>
                             <Button size="sm" variant="ghost" onClick={onCancel}>Fechar</Button>
@@ -1646,3 +1677,5 @@ export function FileValidator() {
     </div>
   );
 }
+
+    
