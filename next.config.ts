@@ -3,7 +3,7 @@ import type {NextConfig} from 'next';
 const nextConfig: NextConfig = {
   output: 'export',
   // Required for Next.js to run in a non-root path
-  assetPrefix: process.env.NODE_ENV === 'production' ? '/ferramentas' : '',
+  assetPrefix: process.env.NODE_ENV === 'production' ? '' : '',
   typescript: {
     ignoreBuildErrors: true,
   },
