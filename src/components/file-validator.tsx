@@ -668,7 +668,7 @@ function CorrectionEditor({ result, onUpdateLine, onCancel }: { result: LineResu
       return (
         <Card className="sticky top-6">
             <CardHeader>
-                <CardTitle className="text-lg">Editor de Correção</CardTitle>
+                <CardTitle className="text-lg">Editor</CardTitle>
                 <CardDescription>Selecione uma linha com erro para começar.</CardDescription>
             </CardHeader>
             <CardContent>
@@ -685,7 +685,7 @@ function CorrectionEditor({ result, onUpdateLine, onCancel }: { result: LineResu
         <CardHeader>
             <div className="flex justify-between items-start">
                 <div>
-                    <CardTitle className="text-lg">Editor de Correção</CardTitle>
+                    <CardTitle className="text-lg">Editor</CardTitle>
                     <CardDescription>Editando Linha <span className="font-bold">{result.lineNumber}</span> ({result.recordType})</CardDescription>
                 </div>
                  <Button size="sm" variant="ghost" onClick={onCancel}>Fechar</Button>
@@ -1615,7 +1615,7 @@ export function FileValidator() {
                                         ) : (
                                            <Card className="sticky top-6">
                                                 <CardHeader>
-                                                    <CardTitle className="text-lg">Editor de Correção</CardTitle>
+                                                    <CardTitle className="text-lg">Editor</CardTitle>
                                                     <CardDescription>Selecione uma linha com erro para começar.</CardDescription>
                                                 </CardHeader>
                                                 <CardContent>
@@ -1696,6 +1696,8 @@ export function FileValidator() {
     </div>
   );
 }
+
+    
 
     
 
