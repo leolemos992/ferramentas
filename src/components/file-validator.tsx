@@ -18,7 +18,7 @@ import { cn } from "@/lib/utils";
 import { Badge } from "./ui/badge";
 import { ScrollArea } from "./ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
-import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "./ui/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "./ui/alert-dialog";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "./ui/accordion";
@@ -1172,6 +1172,32 @@ export function FileValidator() {
         return newResults;
     });
   };
+
+  const handleAutoCorrectAll = () => {
+    setLoading(true);
+    let correctedCount = 0;
+    const newResults = results.map(res => {
+        if (res.errors.length > 0 && !res.isCorrected) {
+            const correctedContent = correctLine(res);
+            if (res.currentLineContent !== correctedContent) {
+                const newValidation = validateLine(correctedContent, res.lineNumber);
+                const isNowCorrect = res.errors.length > 0 && newValidation.errors.length === 0;
+                if (isNowCorrect) {
+                    correctedCount++;
+                }
+                return { ...newValidation, currentLineContent: correctedContent, originalLineContent: res.originalLineContent, isCorrected: isNowCorrect };
+            }
+        }
+        return res;
+    });
+    setResults(newResults);
+    setEditingLine(null);
+    setLoading(false);
+    toast({
+        title: "Correção em Massa Concluída",
+        description: `${correctedCount} linha(s) foram corrigidas automaticamente. Revise as alterações.`,
+    });
+  };
   
   const handleDownloadCorrectedFile = () => {
     if (results.length === 0) {
@@ -1412,7 +1438,7 @@ export function FileValidator() {
     );
   }
 
-  if (loading) {
+  if (loading && results.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-96">
           <Loader2 className="w-12 h-12 mb-4 text-primary animate-spin" />
@@ -1440,7 +1466,7 @@ export function FileValidator() {
                             <CardTitle>Resultado da Validação</CardTitle>
                             <CardDescription>Arquivo: {file?.name}</CardDescription>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                            <Dialog>
                                 <DialogTrigger asChild>
                                     <Button variant="outline" size="icon">
@@ -1501,6 +1527,30 @@ export function FileValidator() {
                                 <UploadCloud className="mr-2"/>
                                 Carregar Novo Arquivo
                             </Button>
+                            <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <Button variant="outline" disabled={invalidLines.length === 0}>
+                                        <Sparkles className="mr-2" />
+                                        Corrigir Todos Automaticamente
+                                    </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>Confirmar Correção Automática em Massa?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            Esta ação tentará corrigir todas as {invalidLines.length} linhas com erro restantes de uma só vez.
+                                            A correção automática é um processo de "melhor esforço" e pode não resolver todos os problemas perfeitamente ou pode introduzir novos erros.
+                                            <br/><br/>
+                                            <strong>É altamente recomendável que você revise as alterações após a conclusão.</strong> Deseja continuar?
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                        <AlertDialogAction onClick={handleAutoCorrectAll}>Sim, Corrigir Todos</AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
+
                             <Button variant="outline" onClick={handleExportPdf} disabled={invalidLines.length === 0}>
                                 <FileText className="mr-2"/>
                                 Exportar PDF
@@ -1517,6 +1567,12 @@ export function FileValidator() {
                     </div>
                 </CardHeader>
                 <CardContent>
+                     {loading && (
+                        <div className="absolute inset-0 bg-background/80 flex flex-col items-center justify-center z-10">
+                            <Loader2 className="w-12 h-12 mb-4 text-primary animate-spin" />
+                            <p className="text-lg text-muted-foreground">Corrigindo linhas...</p>
+                        </div>
+                    )}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
                          <Card>
                             <CardHeader className="pb-2">
