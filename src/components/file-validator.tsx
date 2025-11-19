@@ -1741,44 +1741,44 @@ export function FileValidator() {
                                     Tabela
                                 </Button>
                             </div>
-                            <ScrollArea className="h-[60vh] w-full rounded-md border">
+                            <div className="rounded-md border overflow-auto max-h-[60vh]">
                               {originalFileView === 'raw' ? (
-                                <div className="flex font-mono text-sm">
-                                  <div className="p-4 text-right bg-muted text-muted-foreground select-none sticky left-0">
-                                    {fileContentLines.map((_, index) => (
-                                      <div key={index}>{index + 1}</div>
-                                    ))}
-                                  </div>
-                                  <pre className="p-4 whitespace-pre-wrap flex-1">{fileContent}</pre>
-                                </div>
+                                <ScrollArea className="h-full">
+                                    <div className="flex font-mono text-sm">
+                                    <div className="p-4 text-right bg-muted text-muted-foreground select-none sticky left-0">
+                                        {fileContentLines.map((_, index) => (
+                                        <div key={index}>{index + 1}</div>
+                                        ))}
+                                    </div>
+                                    <pre className="p-4 whitespace-pre-wrap flex-1">{fileContent}</pre>
+                                    </div>
+                                </ScrollArea>
                               ) : (
-                                <div className="relative overflow-auto">
-                                    <Table className="font-mono text-xs">
-                                        <TableHeader>
-                                            <TableRow>
-                                                <TableHead className="w-16 sticky left-0 bg-background z-10">Linha</TableHead>
-                                                {tableData.headers.map((header, index) => (
-                                                    <TableHead key={index} className="border-l">{header}</TableHead>
-                                                ))}
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {tableData.rows.map((row, rowIndex) => (
-                                            row.length > 1 && (
-                                                    <TableRow key={rowIndex}>
-                                                        <TableCell className="text-muted-foreground sticky left-0 bg-background z-10">{rowIndex + 1}</TableCell>
-                                                        {row.map((cell, cellIndex) => (
-                                                            <TableCell key={cellIndex} className="whitespace-nowrap border-l">{cell}</TableCell>
-                                                        ))}
-                                                        {row.length < tableData.headers.length && Array.from({length: tableData.headers.length - row.length}).map((_, i) => <TableCell key={`empty-${i}`} className="border-l"></TableCell>)}
-                                                    </TableRow>
-                                                )
+                                <Table className="font-mono text-xs">
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead className="w-16 sticky left-0 bg-background z-10">Linha</TableHead>
+                                            {tableData.headers.map((header, index) => (
+                                                <TableHead key={index} className="border-l">{header}</TableHead>
                                             ))}
-                                        </TableBody>
-                                    </Table>
-                                </div>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {tableData.rows.map((row, rowIndex) => (
+                                        row.length > 1 && (
+                                                <TableRow key={rowIndex}>
+                                                    <TableCell className="text-muted-foreground sticky left-0 bg-background z-10">{rowIndex + 1}</TableCell>
+                                                    {row.map((cell, cellIndex) => (
+                                                        <TableCell key={cellIndex} className="whitespace-nowrap border-l">{cell}</TableCell>
+                                                    ))}
+                                                    {row.length < tableData.headers.length && Array.from({length: tableData.headers.length - row.length}).map((_, i) => <TableCell key={`empty-${i}`} className="border-l"></TableCell>)}
+                                                </TableRow>
+                                            )
+                                        ))}
+                                    </TableBody>
+                                </Table>
                               )}
-                            </ScrollArea>
+                            </div>
                         </TabsContent>
                     </Tabs>
                 </CardContent>
