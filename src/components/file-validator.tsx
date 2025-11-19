@@ -774,14 +774,19 @@ function CorrectionEditor({ result, onUpdateLine, onCancel }: { result: LineResu
 
 function InvalidLineItem({ result, onSelectLine, isSelected }: { result: LineResult; onSelectLine: () => void; isSelected: boolean }) {
   const itemBg = result.isCorrected 
-    ? "bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700" 
-    : "bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700";
+    ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-700" 
+    : "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-700";
   
+  const mainError = result.errors[0];
+  const fieldName = result.recordType && mainError && mainError.columnIndex >= 0 
+    ? validationRules[result.recordType]?.fields[mainError.columnIndex]?.name 
+    : 'Geral';
+
   return (
     <div 
         onClick={onSelectLine}
         className={cn(
-            "p-3 border-b last:border-b-0 mb-2 rounded-lg transition-colors cursor-pointer",
+            "p-3 border-b mb-2 rounded-lg transition-colors cursor-pointer",
             itemBg,
             isSelected ? 'ring-2 ring-primary ring-offset-2' : 'hover:bg-muted/50'
         )}
@@ -789,40 +794,21 @@ function InvalidLineItem({ result, onSelectLine, isSelected }: { result: LineRes
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-2 flex-wrap">
-            <div className="font-semibold text-sm">Linha {result.lineNumber}:</div>
+            <span className="font-semibold text-sm">L. {result.lineNumber}</span>
             <Badge variant={result.isCorrected ? "default" : "destructive"} className={cn(result.isCorrected && "bg-green-600")}>
                 {result.isCorrected ? 'Corrigido' : result.recordType || 'Inválido'}
             </Badge>
           </div>
-          <div className="break-words whitespace-nowrap overflow-hidden text-ellipsis font-mono text-xs text-muted-foreground" title={result.currentLineContent}>
+          <p className="break-words whitespace-nowrap overflow-hidden text-ellipsis font-mono text-xs text-muted-foreground" title={result.currentLineContent}>
             {result.currentLineContent}
-          </div>
+          </p>
         </div>
       </div>
-      {result.errors.length > 0 && !result.isCorrected && (
-        <Accordion type="single" collapsible className="w-full mt-2">
-            <AccordionItem value="errors" className="border-none">
-                <AccordionTrigger className="text-xs text-red-700 hover:no-underline py-1">
-                    Ver {result.errors.length} erro(s)
-                </AccordionTrigger>
-                <AccordionContent className="pt-2">
-                    <div className="p-2 bg-background rounded-md border border-red-200">
-                        <h4 className="font-semibold text-sm mb-1 text-red-800">Erros Encontrados:</h4>
-                        <ul className="space-y-1 list-disc pl-5 mt-2">
-                        {result.errors.map((error, index) => {
-                            const fieldRule = result.recordType && error.columnIndex >= 0 ? validationRules[result.recordType]?.fields[error.columnIndex] : null;
-                            const fieldName = fieldRule ? fieldRule.name : 'Geral';
-                            return (
-                            <li key={index} className="text-red-700 text-xs font-sans">
-                                <b>{fieldName} (Campo {error.columnIndex + 1}):</b> {error.message}
-                            </li>
-                            );
-                        })}
-                        </ul>
-                    </div>
-                </AccordionContent>
-            </AccordionItem>
-        </Accordion>
+      {mainError && !result.isCorrected && (
+        <div className="mt-2 text-xs text-red-700 font-sans p-2 bg-background rounded-md border border-red-100 dark:border-red-900">
+          <b>{fieldName}:</b> {mainError.message.split(' Sugestão:')[0]}
+          {result.errors.length > 1 && <span className='ml-2 text-red-500'> (e mais {result.errors.length - 1} erro(s))</span>}
+        </div>
       )}
        {result.isCorrected && (
         <div className="mt-2 flex items-center gap-2 text-sm font-medium text-green-700 dark:text-green-300 p-2 bg-green-100 dark:bg-green-900/50 rounded-md">
@@ -1641,7 +1627,7 @@ export function FileValidator() {
                             <TabsTrigger value="file">Arquivo Original</TabsTrigger>
                         </TabsList>
                         
-                        <div className={cn("mt-4", showEditor && "grid gap-6 items-start", showEditor && (isEditorCollapsed ? "grid-cols-1" : "md:grid-cols-2"))}>
+                        <div className={cn("mt-4", showEditor && "grid gap-6 items-start", showEditor && (isEditorCollapsed ? "grid-cols-1" : "md:grid-cols-[1fr_450px]"))}>
                           <div className={cn(showEditor && "space-y-4")}>
                             <TabsContent value="errors">
                                 {toolbarControls}
@@ -1704,9 +1690,9 @@ export function FileValidator() {
                                             <div className="flex flex-col items-center justify-center h-64 text-center border-2 border-dashed rounded-lg p-4">
                                                 <Edit className="w-10 h-10 text-muted-foreground mb-4"/>
                                                 <p className="text-muted-foreground">Clique em uma linha na lista ao lado para editá-la aqui.</p>
-                                                 <AlertDialog>
+                                                <AlertDialog>
                                                     <AlertDialogTrigger asChild>
-                                                        <Button className="mt-4" variant="default" disabled={invalidLines.length === 0}>
+                                                        <Button className="mt-4" variant="outline" disabled={invalidLines.length === 0}>
                                                             <Sparkles className="mr-2" />
                                                             Corrigir Todos Automaticamente
                                                         </Button>
@@ -1769,7 +1755,7 @@ export function FileValidator() {
                                 <div className="rounded-md border">
                                   {originalFileView === 'raw' ? (
                                     <div className="relative">
-                                      <div className="max-h-[60vh] overflow-auto">
+                                      <div className="max-h-[60vh] overflow-y-auto">
                                         <Table className="font-mono text-xs">
                                             <TableBody>
                                                 {fileContentLines.map((line, index) => (
