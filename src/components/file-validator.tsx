@@ -635,6 +635,35 @@ function CorrectionEditor({ result, onUpdateLine, onCancel }: { result: LineResu
     );
   };
 
+  const getFieldInfo = (fieldRule: FieldRule) => {
+    const typeMap = {
+        'C': 'Texto',
+        'N': 'Numérico',
+        'D': 'Data',
+        'T': 'Data/Hora'
+    };
+    const parts = [];
+    parts.push(`Tipo: ${typeMap[fieldRule.type]}`);
+    if (fieldRule.maxLength !== Infinity) {
+        parts.push(`Tamanho: ${fieldRule.maxLength}`);
+    }
+    if (fieldRule.required) {
+        parts.push('Obrigatório');
+    }
+    return parts.join(' | ');
+  }
+
+  const getPlaceholder = (fieldRule: FieldRule) => {
+    switch(fieldRule.type) {
+        case 'D': return 'AAAAMMDD';
+        case 'T': return 'AAAAMMDDHHMMSS';
+        case 'N': return fieldRule.decimals ? `Ex: ${'123,'.padEnd(fieldRule.decimals + 4, '0')}` : 'Ex: 123';
+        case 'C': return 'Texto...';
+        default: return '';
+    }
+  }
+
+
   if (!rule) {
       return (
         <Card className="sticky top-6">
@@ -668,14 +697,24 @@ function CorrectionEditor({ result, onUpdateLine, onCancel }: { result: LineResu
                         <div className="space-y-4 pr-4">
                         {rule.fields.map((fieldRule, index) => (
                             <div key={index} className="space-y-1">
-                            <Label htmlFor={`field-${index}`}>{fieldRule.name} <span className="text-xs text-muted-foreground">(Campo {index + 1})</span></Label>
-                            <Input 
-                                id={`field-${index}`}
-                                value={fieldValues[index] || ''}
-                                onChange={(e) => handleFieldChange(index, e.target.value)}
-                                className={cn(fieldErrors[index] ? "border-red-500 focus-visible:ring-red-500" : "")}
-                            />
-                            {fieldErrors[index] && <p className="text-xs text-red-600">{fieldErrors[index]}</p>}
+                                <Label htmlFor={`field-${index}`}>{fieldRule.name} <span className="text-xs text-muted-foreground">(Campo {index + 1})</span></Label>
+                                <Input 
+                                    id={`field-${index}`}
+                                    value={fieldValues[index] || ''}
+                                    onChange={(e) => handleFieldChange(index, e.target.value)}
+                                    className={cn(fieldErrors[index] ? "border-red-500 focus-visible:ring-red-500" : "")}
+                                    maxLength={fieldRule.maxLength === Infinity ? undefined : fieldRule.maxLength}
+                                    placeholder={getPlaceholder(fieldRule)}
+                                />
+                                <div className="text-xs text-muted-foreground flex justify-between px-1">
+                                    <span>{getFieldInfo(fieldRule)}</span>
+                                    {fieldRule.maxLength !== Infinity && (
+                                        <span className={cn( (fieldValues[index]?.length || 0) > fieldRule.maxLength && "text-red-500 font-bold")}>
+                                           (caracteres: {fieldValues[index]?.length || 0} / {fieldRule.maxLength})
+                                        </span>
+                                    )}
+                                </div>
+                                {fieldErrors[index] && <p className="text-xs text-red-600 mt-1 px-1">{fieldErrors[index]}</p>}
                             </div>
                         ))}
                         </div>
