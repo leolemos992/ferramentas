@@ -1367,21 +1367,20 @@ export function FileValidator() {
                                 </section>
                                 <section>
                                     <h3 className="font-semibold text-base mb-2">3. Corrigindo Erros</h3>
-                                    <p>A tela é dividida em duas: a lista de erros à esquerda e o **Editor de Correção** à direita.</p>
+                                    <p>A tela é dividida em duas partes: a lista de erros à esquerda e o painel do **Editor** à direita, que pode ser recolhido para melhor visualização.</p>
                                     <ul className="list-disc pl-5 mt-2 space-y-1">
-                                        <li><strong>Selecionar uma Linha:</strong> Clique em qualquer linha na lista da esquerda para carregá-la no editor à direita.</li>
+                                        <li><strong>Selecionar Linha:</strong> Clique em uma linha na lista de erros para carregá-la no editor.</li>
                                         <li><strong>Agrupar Erros:</strong> Use a opção "Agrupar Erros" para visualizar os problemas por tipo, facilitando a identificação de padrões.</li>
-                                        <li><strong>Edição Detalhada:</strong> No editor, use a aba "Edição Detalhada" para corrigir cada campo individualmente. Campos com erro são destacados em vermelho.</li>
-                                        <li><strong>Edição Rápida:</strong> Use a aba "Edição Rápida" para editar a linha inteira como um único texto, útil para correções rápidas.</li>
-                                        <li>Ao salvar, a linha na lista será atualizada instantaneamente com seu novo status (corrigida ou ainda com erro).</li>
+                                        <li><strong>Edição Detalhada:</strong> Na aba "Edição Detalhada", você pode corrigir cada campo individualmente. O editor informa o tipo, tamanho máximo e obrigatoriedade de cada campo.</li>
+                                        <li><strong>Edição Rápida:</strong> Na aba "Edição Rápida", você pode editar a linha inteira como texto. Uma visualização com os erros destacados ajuda a encontrar os problemas.</li>
+                                        <li><strong>Correção Automática (por linha):</strong> Dentro do editor, clique em "Correção Automática" para aplicar uma correção instantânea apenas na linha selecionada. Revise o resultado antes de salvar.</li>
                                     </ul>
                                 </section>
                                 <section>
-                                    <h3 className="font-semibold text-base mb-2">4. Baixando o Arquivo Corrigido</h3>
-                                    <p>Após fazer as edições, clique no botão <strong>"Corrigir e Baixar"</strong>. Você terá duas opções:</p>
-                                     <ul className="list-disc pl-5 mt-2 space-y-1">
-                                        <li><strong>Baixar com Correções Manuais:</strong> Gera um novo arquivo contendo apenas as alterações que você fez manualmente.</li>
-                                        <li><strong>Usar Correção Automática:</strong> A ferramenta tentará corrigir os erros restantes automaticamente. <strong>Atenção:</strong> Use esta opção com cuidado, pois a correção automática pode não ser perfeita para todos os casos.</li>
+                                    <h3 className="font-semibold text-base mb-2">4. Correção em Massa e Download</h3>
+                                    <ul className="list-disc pl-5 mt-2 space-y-1">
+                                        <li><strong>Corrigir Todos Automaticamente:</strong> Use este botão para aplicar a correção automática a todas as linhas com erro de uma só vez. <strong>Atenção:</strong> Revise as alterações, pois a automação pode não ser perfeita.</li>
+                                        <li><strong>Baixar Arquivo Corrigido:</strong> Após fazer todas as suas correções (manuais ou automáticas), clique neste botão para baixar o arquivo com o conteúdo final que você está vendo na tela.</li>
                                     </ul>
                                 </section>
                                  <section>
@@ -1498,21 +1497,20 @@ export function FileValidator() {
                                         </section>
                                         <section>
                                             <h3 className="font-semibold text-base mb-2">3. Corrigindo Erros</h3>
-                                            <p>A tela é dividida em duas: a lista de erros à esquerda e o **Editor de Correção** à direita.</p>
+                                            <p>A tela é dividida em duas partes: a lista de erros à esquerda e o painel do **Editor** à direita, que pode ser recolhido para melhor visualização.</p>
                                             <ul className="list-disc pl-5 mt-2 space-y-1">
-                                                <li><strong>Selecionar uma Linha:</strong> Clique em qualquer linha na lista da esquerda para carregá-la no editor à direita.</li>
+                                                <li><strong>Selecionar Linha:</strong> Clique em uma linha na lista de erros para carregá-la no editor.</li>
                                                 <li><strong>Agrupar Erros:</strong> Use a opção "Agrupar Erros" para visualizar os problemas por tipo, facilitando a identificação de padrões.</li>
-                                                <li><strong>Edição Detalhada:</strong> No editor, use a aba "Edição Detalhada" para corrigir cada campo individualmente. Campos com erro são destacados em vermelho.</li>
-                                                <li><strong>Edição Rápida:</strong> Use a aba "Edição Rápida" para editar a linha inteira como um único texto, útil para correções rápidas.</li>
-                                                <li>Ao salvar, a linha na lista será atualizada instantaneamente com seu novo status (corrigida ou ainda com erro).</li>
+                                                <li><strong>Edição Detalhada:</strong> Na aba "Edição Detalhada", você pode corrigir cada campo individualmente. O editor informa o tipo, tamanho máximo e obrigatoriedade de cada campo.</li>
+                                                <li><strong>Edição Rápida:</strong> Na aba "Edição Rápida", você pode editar a linha inteira como texto. Uma visualização com os erros destacados ajuda a encontrar os problemas.</li>
+                                                <li><strong>Correção Automática (por linha):</strong> Dentro do editor, clique em "Correção Automática" para aplicar uma correção instantânea apenas na linha selecionada. Revise o resultado antes de salvar.</li>
                                             </ul>
                                         </section>
                                         <section>
-                                            <h3 className="font-semibold text-base mb-2">4. Baixando o Arquivo Corrigido</h3>
-                                            <p>Após fazer as edições, clique no botão <strong>"Corrigir e Baixar"</strong>. Você terá duas opções:</p>
-                                             <ul className="list-disc pl-5 mt-2 space-y-1">
-                                                <li><strong>Baixar com Correções Manuais:</strong> Gera um novo arquivo contendo apenas as alterações que você fez manualmente.</li>
-                                                <li><strong>Usar Correção Automática:</strong> A ferramenta tentará corrigir os erros restantes automaticamente. <strong>Atenção:</strong> Use esta opção com cuidado, pois a correção automática pode não ser perfeita para todos os casos.</li>
+                                            <h3 className="font-semibold text-base mb-2">4. Correção em Massa e Download</h3>
+                                            <ul className="list-disc pl-5 mt-2 space-y-1">
+                                                <li><strong>Corrigir Todos Automaticamente:</strong> Use este botão para aplicar a correção automática a todas as linhas com erro de uma só vez. <strong>Atenção:</strong> Revise as alterações, pois a automação pode não ser perfeita.</li>
+                                                <li><strong>Baixar Arquivo Corrigido:</strong> Após fazer todas as suas correções (manuais ou automáticas), clique neste botão para baixar o arquivo com o conteúdo final que você está vendo na tela.</li>
                                             </ul>
                                         </section>
                                          <section>
@@ -1722,4 +1720,5 @@ export function FileValidator() {
   );
 }
 
+    
     
